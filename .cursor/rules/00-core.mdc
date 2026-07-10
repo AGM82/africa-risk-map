@@ -1,0 +1,46 @@
+---
+description: Core engineering workflow and non-negotiables for every task
+alwaysApply: true
+---
+
+# How we work
+
+- Plan before building. For any non-trivial change, use Plan Mode (Shift+Tab), answer the clarifying questions, and get the plan approved before writing code. Save plans to `.cursor/plans/`.
+- Make the smallest change that satisfies the requirement. Search the codebase for existing patterns before adding anything new. Extend before you invent.
+- Prove correctness. After a series of edits, run `npm run typecheck`, `npm run lint`, and `npm run test`. A task is not done until these pass. CI enforces coverage thresholds (lines ≥ 80%, functions ≥ 80%, branches ≥ 70%) — new code must maintain or improve these.
+- Use only what you can verify: files you have read, the user's instructions, and tool results. If information is missing, search, then ask.
+- Match the codebase. The canonical component, API route, and test for this project are listed in `90-project-context.mdc`.
+
+# Commands
+- `npm run dev` — local dev server
+- `npm run build` — production build
+- `npm run typecheck` — TypeScript, no emit
+- `npm run lint` — ESLint
+- `npm run test` — test suite
+
+# Autonomy boundaries
+
+These rules apply equally to interactive agents and background/autonomous agents.
+
+**Permitted autonomously** (no human gate needed):
+- Read any file or directory.
+- Run `typecheck`, `lint`, `test`, `build`, and other read-only checks.
+- Write or edit files inside `src/`, `.cursor/rules/`, `.cursor/commands/`, and `docs/`.
+- Open draft PRs and push to feature branches.
+
+**Always require explicit human approval** (halt and ask before proceeding):
+- `git push` to `main` or any protected branch (pushing to a feature branch is permitted autonomously).
+- `npm publish` or any registry publish.
+- Destructive file operations (recursive delete, overwriting files outside `src/`).
+- Changes to `.env`, secrets, or any environment variable configuration.
+- Disabling or weakening a CI job, hook, or lint rule.
+
+**Background agents additionally must:**
+- Write a plan to `.cursor/plans/` before making any write outside `src/`.
+- Halt and surface the plan for approval before executing it.
+- Never commit directly to `main`.
+
+# Hard stops
+- No secrets, credentials, or real client data in source, logs, or commits.
+- Do not modify tests to make failing code pass.
+- Do not disable a linter or type rule to silence an error; fix the cause.

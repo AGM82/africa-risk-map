@@ -1,0 +1,310 @@
+{
+  "schemaVersion": 4,
+  "guardrailVersion": "1.4.0",
+  "description": "Canonical adoption-layer model and risk-tier mapping for the cursor-guardrails template. Single source of truth for /guardrail-upgrade and downstream governance tools such as Throughline. Do not edit by hand — changes must be deliberate and version-bumped. Verified against the actual file tree by .github/scripts/check-manifest-drift.mjs in CI.",
+  "source": "https://github.com/AGM82/cursor-guardrails",
+  "lastUpdated": "2026-07-05",
+  "adoptionLayers": {
+    "1": {
+      "name": "AI instructions",
+      "description": "Rule files, slash commands, hooks, and cross-tool agent summary. Always safe to add — nothing here touches application code.",
+      "safe": true,
+      "files": [
+        ".cursor/rules/00-core.mdc",
+        ".cursor/rules/10-security-popia.mdc",
+        ".cursor/rules/20-commits.mdc",
+        ".cursor/rules/30-react-stack.mdc",
+        ".cursor/rules/31-design.mdc",
+        ".cursor/rules/32-ux-behavioural.mdc",
+        ".cursor/rules/33-data-science.mdc",
+        ".cursor/rules/40-tooling-supply-chain.mdc",
+        ".cursor/rules/50-ai-tooling.mdc",
+        ".cursor/rules/60-backend-api.mdc",
+        ".cursor/rules/61-database.mdc",
+        ".cursor/rules/62-deployment-observability.mdc",
+        ".cursor/rules/90-project-context.mdc",
+        ".cursor/commands/audit.md",
+        ".cursor/commands/review.md",
+        ".cursor/commands/pr.md",
+        ".cursor/commands/update-deps.md",
+        ".cursor/commands/guardrail-upgrade.md",
+        ".cursor/hooks.json",
+        ".cursor/hooks/guard-shell.mjs",
+        ".cursor/hooks/guard-read.mjs",
+        ".cursor/hooks/audit.mjs",
+        ".cursor/mcp.json",
+        ".cursorignore",
+        "AGENTS.md"
+      ],
+      "domains": [
+        "Engineering",
+        "Security",
+        "Commits",
+        "Frontend",
+        "Design",
+        "UX",
+        "DataScience",
+        "Tooling",
+        "AITooling",
+        "Backend",
+        "Database",
+        "Deployment"
+      ]
+    },
+    "2": {
+      "name": "Git hygiene",
+      "description": "Version control conventions, ignore rules, editor config, dependency management, legal, and contribution docs. Safe to add.",
+      "safe": true,
+      "files": [
+        ".gitattributes",
+        ".gitignore",
+        ".nvmrc",
+        ".npmrc",
+        ".editorconfig",
+        "LICENSE",
+        "SECURITY.md",
+        "CONTRIBUTING.md",
+        ".github/CODEOWNERS",
+        ".github/dependabot.yml",
+        ".github/pull_request_template.md"
+      ]
+    },
+    "3": {
+      "name": "Commit discipline",
+      "description": "Conventional Commits enforcement, pre-commit hooks, and lint-staged. Safe to add without touching application code.",
+      "safe": true,
+      "files": ["commitlint.config.mjs", ".husky/pre-commit", ".husky/commit-msg"]
+    },
+    "4": {
+      "name": "Code quality toolchain",
+      "description": "ESLint, Prettier, strict TypeScript. Merge carefully — may surface existing errors in application code.",
+      "safe": false,
+      "files": ["eslint.config.js", ".prettierrc.json", "tsconfig.json"]
+    },
+    "5": {
+      "name": "CI pipeline",
+      "description": "GitHub Actions: typecheck, lint, build, npm audit, secret scan (gitleaks), SAST (Semgrep). Merge carefully.",
+      "safe": false,
+      "files": [".github/workflows/ci.yml"]
+    },
+    "6": {
+      "name": "Code compliance audit",
+      "description": "Manual audit of existing source code against installed rules. Classifies findings as Blocker / Should-fix / Nit. Not a file copy — a process step.",
+      "safe": false,
+      "files": []
+    },
+    "7": {
+      "name": "Governance activation",
+      "description": "Human checklist: branch protection on main, Dependabot PRs reviewed, gh CLI installed. Not a file copy — a verification step.",
+      "safe": false,
+      "files": []
+    }
+  },
+  "riskTiers": {
+    "Low": {
+      "requiredLayers": [1, 2, 3],
+      "rationale": "Low-risk initiatives require AI governance, version control discipline, and commit standards. Code quality and CI are strongly encouraged but not mandatory gates."
+    },
+    "Medium": {
+      "requiredLayers": [1, 2, 3, 4, 5],
+      "rationale": "Medium-risk initiatives require full toolchain enforcement and a CI pipeline with security scanning in addition to the Low requirements."
+    },
+    "High": {
+      "requiredLayers": [1, 2, 3, 4, 5, 6],
+      "rationale": "High-risk initiatives require all of Medium plus a formal code compliance audit before build begins. Layer 7 governance activation is expected but recorded separately as a human checklist."
+    }
+  },
+  "projectProfiles": {
+    "description": "Drives the Layer 0.4 'Project profile' step in guardrail-upgrade.md so the recommended layer set adapts to each project instead of a blanket 'apply all'. The risk question reuses riskTiers above — this block does not duplicate that mapping. Not every project has the same needs: a library needs different active domains than a full-stack app, and a low-risk prototype needs fewer required layers than a high-risk production service.",
+    "questions": [
+      {
+        "id": "type",
+        "prompt": "What kind of project is this?",
+        "options": [
+          "frontend-ui",
+          "backend-api",
+          "full-stack",
+          "library-or-cli",
+          "script-or-prototype"
+        ],
+        "mapsTo": "projectProfiles.types"
+      },
+      {
+        "id": "risk",
+        "prompt": "What is the risk level of this project?",
+        "options": ["Low", "Medium", "High"],
+        "mapsTo": "riskTiers"
+      },
+      {
+        "id": "existingToolchain",
+        "prompt": "Does the project already have its own ESLint/Prettier/tsconfig setup?",
+        "options": ["yes", "no"],
+        "effect": "If yes, treat Layer 4 as extra merge-carefully: read both configs in full before adding strict settings, and never overwrite."
+      }
+    ],
+    "alwaysActiveDomains": ["Engineering", "Security", "Commits", "Tooling", "AITooling"],
+    "types": {
+      "frontend-ui": {
+        "activeDomains": ["Frontend", "Design", "UX"],
+        "inertUntilUsedDomains": ["Backend", "Database", "Deployment", "DataScience"]
+      },
+      "backend-api": {
+        "activeDomains": ["Backend"],
+        "inertUntilUsedDomains": [
+          "Frontend",
+          "Design",
+          "UX",
+          "Database",
+          "Deployment",
+          "DataScience"
+        ]
+      },
+      "full-stack": {
+        "activeDomains": ["Frontend", "Design", "UX", "Backend"],
+        "inertUntilUsedDomains": ["Database", "Deployment", "DataScience"]
+      },
+      "library-or-cli": {
+        "activeDomains": [],
+        "inertUntilUsedDomains": [
+          "Frontend",
+          "Design",
+          "UX",
+          "Backend",
+          "Database",
+          "Deployment",
+          "DataScience"
+        ]
+      },
+      "script-or-prototype": {
+        "activeDomains": [],
+        "inertUntilUsedDomains": [
+          "Frontend",
+          "Design",
+          "UX",
+          "Backend",
+          "Database",
+          "Deployment",
+          "DataScience"
+        ]
+      }
+    }
+  },
+  "lifecycleStages": {
+    "description": "The Build-track (runs once per project) and Maintain-track (runs forever) stages documented in docs/project-lifecycle.md, encoded here as data so a downstream tool (e.g. Throughline) can detect which stage a project is in from deterministic GitHub facts — check-run results, PR review state, merge status — never from an AI's read of the code. ciCheckNames must match the exact GitHub check-run names this template's own CI produces (see .github/workflows/ci.yml); a project using different job names must adapt its own copy, this block is not auto-derived from ci.yml.",
+    "ciCheckNames": {
+      "verify": "Typecheck, lint, test, build",
+      "secretScan": "Secret scan (gitleaks)",
+      "sast": "SAST (Semgrep OWASP Top Ten)"
+    },
+    "stages": [
+      {
+        "stage": 1,
+        "name": "Discover & Define",
+        "track": "build",
+        "detectionSignals": [
+          "Initiative recorded in the governance tool",
+          "First commit observed on the repository"
+        ]
+      },
+      {
+        "stage": 2,
+        "name": "Design",
+        "track": "build",
+        "detectionSignals": ["A file matching .cursor/plans/*.md present in a commit"]
+      },
+      {
+        "stage": 3,
+        "name": "Build",
+        "track": "build",
+        "detectionSignals": [
+          "Commits present on a non-default branch",
+          "No check run from ciCheckNames.verify has concluded success yet"
+        ]
+      },
+      {
+        "stage": 4,
+        "name": "Verify",
+        "track": "build",
+        "detectionSignals": [
+          "Latest check run named ciCheckNames.verify on the branch concluded success"
+        ]
+      },
+      {
+        "stage": 5,
+        "name": "Secure",
+        "track": "build",
+        "detectionSignals": [
+          "Check runs named ciCheckNames.secretScan and ciCheckNames.sast both concluded success on the same commit as ciCheckNames.verify"
+        ]
+      },
+      {
+        "stage": 6,
+        "name": "Review",
+        "track": "build",
+        "detectionSignals": [
+          "An open pull request exists with at least one review in the APPROVED state"
+        ]
+      },
+      {
+        "stage": 7,
+        "name": "Release",
+        "track": "build",
+        "detectionSignals": [
+          "The pull request was merged to the default branch",
+          "All three ciCheckNames checks concluded success on the merge commit"
+        ]
+      },
+      {
+        "stage": 8,
+        "name": "Operate & Maintain",
+        "track": "maintain",
+        "detectionSignals": [
+          "Ongoing after stage 7: .cursor/guardrail-version compared against the latest published guardrailVersion",
+          "Open Dependabot pull request status"
+        ]
+      }
+    ]
+  },
+  "schemaChangelog": [
+    {
+      "schemaVersion": 1,
+      "date": "2026-06-26",
+      "note": "Initial publication. Encodes 7 adoption layers and Low/Medium/High tier mapping. Introduces 10 rule files including four new holistic domains (31-design, 32-ux-behavioural, 33-data-science, 50-ai-tooling)."
+    },
+    {
+      "schemaVersion": 2,
+      "date": "2026-06-30",
+      "note": "Adds .cursor/mcp.json and .cursorignore to Layer 1 — both already existed in the template and were already listed in guardrail-upgrade.md, but had drifted out of this manifest. Adds the check-manifest-drift.mjs CI guard so Layer 1 cannot silently go out of date again."
+    },
+    {
+      "schemaVersion": 2,
+      "date": "2026-06-30",
+      "note": "Adds three new rule files to Layer 1 — 60-backend-api.mdc, 61-database.mdc, 62-deployment-observability.mdc — and three new domains (Backend, Database, Deployment), closing the gap where the template had no guidance once a project adds a server, database, or deployment pipeline. guardrailVersion patch bump per the new-rule-file convention."
+    },
+    {
+      "schemaVersion": 2,
+      "date": "2026-07-04",
+      "note": "Adds .cursor/commands/audit.md to Layer 1 — a new /audit command for whole-repo, point-in-time health audits (distinct from the diff-scoped /review and template-comparison /guardrail-upgrade). guardrailVersion patch bump per the new-file-in-Layer-1 convention established for rule files, extended here to command files."
+    },
+    {
+      "schemaVersion": 3,
+      "date": "2026-07-04",
+      "note": "Adds a new top-level projectProfiles block — the data model for the Layer 0.4 'Project profile' step in guardrail-upgrade.md. Maps project type to active vs inert-until-used domains and reuses the existing riskTiers block for the layer recommendation, so adoption is tailored per project instead of a blanket 'apply all'. Additive schema change (schemaVersion 2 -> 3); guardrailVersion patch bump (the system improved)."
+    },
+    {
+      "schemaVersion": 3,
+      "date": "2026-07-04",
+      "note": "No schema change — documents a /guardrail-upgrade behaviour improvement. Layer 0 (Bootstrap) now refreshes the local template clone with 'git pull --ff-only origin main' before reading any files from it, and falls back to a guardrail-version staleness warning if the pull cannot complete. Closes the gap where TEMPLATE_PATH could silently point at a months-old clone even though the published template had moved on. guardrailVersion patch bump (the system improved)."
+    },
+    {
+      "schemaVersion": 3,
+      "date": "2026-07-05",
+      "note": "No schema change — documents two /guardrail-upgrade behaviour improvements. (1) Layer 0.4 (Project profile) now checks for a guardrail-prescription.json handoff file before asking its own 3 questions, so a Throughline (or other governance tool) classification carries through to execution instead of being re-answered and potentially diverging. See docs/guardrail-prescription.md for the contract. (2) 'Template clone' terminology is standardised to 'reference clone' across docs/playbook/README, and docs/connect-guardrails.md and docs/project-lifecycle.md are added as the canonical direct-vs-Throughline guide and the two-track SDLC lifecycle model respectively. guardrailVersion patch bump (the system improved)."
+    },
+    {
+      "schemaVersion": 4,
+      "date": "2026-07-05",
+      "note": "Adds a new top-level lifecycleStages block — the data model for automated, deterministic detection of which of the 8 docs/project-lifecycle.md stages a project is in, derived from GitHub facts (check-run results, PR review state, merge status) rather than an AI's read of the code. Includes ciCheckNames so downstream tools (e.g. a Throughline GitHub App integration) key off this template's actual CI check-run names instead of guessing or hardcoding a second copy. Additive schema change (schemaVersion 3 -> 4); guardrailVersion minor bump (new mapping/domain added, per the existing convention)."
+    }
+  ]
+}

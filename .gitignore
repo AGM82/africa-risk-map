@@ -1,0 +1,17 @@
+node_modules/
+dist/
+build/
+.next/
+coverage/
+.env
+.env.*
+!.env.example
+*.local
+.DS_Store
+
+# Agent hook audit logs and local state
+.cursor/hooks/logs/
+.cursor/hooks/state/
+
+# Guardrail upgrade — local artefacts (never commit)
+.cursor/guardrail-baseline.log

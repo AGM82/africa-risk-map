@@ -1,0 +1,1608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cursor Guardrails Playbook</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --bg2: #171a24;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3350;
+    --text: #e2e8f0;
+    --text2: #94a3b8;
+    --text3: #64748b;
+    --accent: #6366f1;
+    --accent-hover: #818cf8;
+    --green: #22c55e;
+    --yellow: #f59e0b;
+    --red: #ef4444;
+    --blue: #3b82f6;
+    --purple: #a855f7;
+    --cyan: #06b6d4;
+    --orange: #f97316;
+    --sidebar-w: 220px;
+    --radius: 8px;
+    --radius-sm: 4px;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f8fafc;
+      --bg2: #eef2f7;
+      --surface: #ffffff;
+      --surface2: #f1f5f9;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --text2: #475569;
+      --text3: #94a3b8;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; font-size: 14px; line-height: 1.6; }
+  .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+  /* Sidebar */
+  #sidebar { width: var(--sidebar-w); flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border); position: fixed; top: 0; left: 0; height: 100vh; overflow-y: auto; padding: 20px 0; z-index: 100; }
+  .sidebar-logo { padding: 0 16px 20px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+  .sidebar-logo h2 { font-size: 13px; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; text-transform: uppercase; }
+  .sidebar-logo p { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .nav-item { display: flex; align-items: center; gap: 8px; padding: 8px 16px; cursor: pointer; border-left: 3px solid transparent; color: var(--text2); font-size: 13px; font-weight: 500; transition: all 0.15s; text-decoration: none; }
+  .nav-item:hover { background: var(--surface2); color: var(--text); border-left-color: var(--border); }
+  .nav-item.active { background: var(--surface2); color: var(--accent); border-left-color: var(--accent); }
+  .nav-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+  .nav-section-label { padding: 16px 16px 4px; font-size: 10px; font-weight: 700; color: var(--text3); letter-spacing: 0.08em; text-transform: uppercase; }
+
+  /* Main content */
+  #main { margin-left: var(--sidebar-w); flex: 1; padding: 0; }
+  .section { padding: 40px 48px; border-bottom: 1px solid var(--border); display: none; }
+  .section.active { display: block; }
+  .section-header { margin-bottom: 28px; }
+  .section-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .section-desc { color: var(--text2); max-width: 680px; }
+
+  /* Settings bar */
+  #settings-bar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 10px 48px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 50; margin-left: 0; }
+  #settings-bar label { font-size: 12px; color: var(--text2); white-space: nowrap; }
+  #template-path-input { flex: 1; max-width: 500px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 10px; color: var(--text); font-size: 12px; font-family: 'Courier New', monospace; }
+  #template-path-input:focus { outline: none; border-color: var(--accent); }
+  .save-btn { background: var(--accent); color: white; border: none; border-radius: var(--radius-sm); padding: 6px 14px; font-size: 12px; cursor: pointer; font-weight: 600; }
+  .save-btn:hover { background: var(--accent-hover); }
+  .path-saved { font-size: 11px; color: var(--green); display: none; }
+
+  /* Cards and components */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
+  .card-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .badge-patch { background: rgba(34,197,94,0.15); color: var(--green); }
+  .badge-minor { background: rgba(245,158,11,0.15); color: var(--yellow); }
+  .badge-major { background: rgba(239,68,68,0.15); color: var(--red); }
+  .badge-info { background: rgba(99,102,241,0.15); color: var(--accent); }
+  .badge-safe { background: rgba(34,197,94,0.15); color: var(--green); }
+  .badge-merge { background: rgba(245,158,11,0.15); color: var(--yellow); }
+
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+  th { text-align: left; padding: 8px 12px; font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid var(--border); }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface2); }
+
+  code { background: var(--surface2); border: 1px solid var(--border); border-radius: 3px; padding: 1px 5px; font-family: 'Courier New', monospace; font-size: 12px; color: var(--accent-hover); }
+  pre { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; font-family: 'Courier New', monospace; font-size: 12px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; line-height: 1.6; color: var(--text); margin: 8px 0; }
+
+  .copy-block { position: relative; }
+  .copy-btn { position: absolute; top: 8px; right: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 4px 10px; font-size: 11px; cursor: pointer; color: var(--text2); }
+  .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .copy-btn.copied { color: var(--green); border-color: var(--green); }
+
+  .btn { display: inline-flex; align-items: center; gap: 6px; border: none; border-radius: var(--radius-sm); padding: 7px 14px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+  .btn-accept { background: rgba(34,197,94,0.15); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
+  .btn-accept:hover { background: rgba(34,197,94,0.25); }
+  .btn-info { background: rgba(99,102,241,0.15); color: var(--accent); border: 1px solid rgba(99,102,241,0.3); }
+  .btn-info:hover { background: rgba(99,102,241,0.25); }
+  .btn-decline { background: rgba(100,116,139,0.1); color: var(--text3); border: 1px solid var(--border); }
+  .btn-decline:hover { background: rgba(239,68,68,0.1); color: var(--red); border-color: rgba(239,68,68,0.3); }
+  .btn-primary { background: var(--accent); color: white; border: 1px solid var(--accent); }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-ghost { background: transparent; color: var(--text2); border: 1px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+  .accept-panel { background: var(--surface2); border: 1px solid rgba(34,197,94,0.2); border-radius: var(--radius-sm); padding: 14px; margin-top: 12px; display: none; }
+  .accept-panel.open { display: block; }
+  .accept-panel-label { font-size: 11px; color: var(--text3); margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+
+  .update-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; margin-bottom: 12px; }
+  .update-card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+  .update-card-name { font-weight: 700; font-size: 15px; }
+  .version-arrow { color: var(--text3); font-size: 12px; }
+  .update-card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .changelog-entry { border-left: 3px solid var(--accent); padding: 0 0 0 14px; margin-bottom: 16px; }
+  .changelog-tag { font-weight: 700; font-size: 14px; color: var(--accent); }
+  .changelog-date { font-size: 11px; color: var(--text3); margin-left: 8px; }
+  .changelog-body { font-size: 13px; color: var(--text2); margin-top: 6px; }
+
+  .project-row td:first-child { font-weight: 600; }
+  .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+  .status-current { background: var(--green); }
+  .status-behind { background: var(--yellow); }
+  .status-none { background: var(--text3); }
+
+  .health-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .health-item:last-child { border-bottom: none; }
+  .health-check { width: 18px; height: 18px; border: 2px solid var(--border); border-radius: 3px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .health-check.checked { background: var(--green); border-color: var(--green); }
+  .health-check.checked::after { content: '✓'; color: white; font-size: 11px; font-weight: 700; }
+  .health-label { flex: 1; font-size: 13px; }
+  .health-score { font-size: 13px; font-weight: 700; padding: 4px 12px; border-radius: 12px; }
+
+  .prompt-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; margin-bottom: 12px; }
+  .prompt-category { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); margin-bottom: 4px; }
+  .prompt-name { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .prompt-desc { font-size: 12px; color: var(--text2); margin-bottom: 12px; }
+  .prompt-actions { display: flex; gap: 8px; }
+  .prompt-preview { background: var(--surface2); border-radius: var(--radius-sm); padding: 12px; margin-top: 12px; display: none; }
+  .prompt-preview.open { display: block; }
+
+  .kb-card { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 10px; }
+  .kb-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; cursor: pointer; background: var(--surface); }
+  .kb-header:hover { background: var(--surface2); }
+  .kb-title { font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+  .kb-tag { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; padding: 2px 7px; border-radius: 10px; }
+  .kb-chevron { color: var(--text3); transition: transform 0.2s; }
+  .kb-body { padding: 16px 18px; background: var(--surface2); border-top: 1px solid var(--border); display: none; font-size: 13px; color: var(--text2); line-height: 1.7; }
+  .kb-body.open { display: block; }
+  .kb-body p { margin-bottom: 8px; }
+  .kb-body p:last-child { margin-bottom: 0; }
+
+  .tier-col-type { display: inline-flex; align-items: center; gap: 5px; }
+  .tier-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+  .empty-state { text-align: center; padding: 48px 24px; color: var(--text3); }
+  .empty-state-icon { font-size: 36px; margin-bottom: 12px; }
+  .empty-state p { font-size: 13px; }
+
+  .loading { display: flex; align-items: center; gap: 8px; color: var(--text3); font-size: 13px; padding: 16px 0; }
+  .spinner { width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  h3 { font-size: 15px; font-weight: 700; margin: 24px 0 12px; color: var(--text); }
+  h3:first-child { margin-top: 0; }
+  ul { padding-left: 20px; }
+  li { margin-bottom: 5px; font-size: 13px; color: var(--text2); }
+  li strong { color: var(--text); }
+  p { font-size: 13px; color: var(--text2); margin-bottom: 10px; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { color: var(--accent-hover); text-decoration: underline; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+
+  .tag-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+  .tag { display: inline-flex; align-items: center; gap: 5px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 4px 10px; font-size: 12px; cursor: pointer; color: var(--text2); font-family: 'Courier New', monospace; }
+  .tag:hover { border-color: var(--accent); color: var(--accent); }
+
+  .add-project-form { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-top: 16px; display: none; }
+  .add-project-form.open { display: block; }
+  .form-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+  .form-field { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 140px; }
+  .form-field label { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; }
+  .form-field input, .form-field select { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 7px 10px; color: var(--text); font-size: 13px; }
+  .form-field input:focus, .form-field select:focus { outline: none; border-color: var(--accent); }
+  .form-actions { display: flex; gap: 8px; }
+
+  .update-status-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+  .update-status-bar span { font-size: 12px; color: var(--text3); }
+
+  .section-tabs { display: flex; gap: 4px; margin-bottom: 24px; border-bottom: 1px solid var(--border); }
+  .section-tab { padding: 8px 16px; font-size: 13px; cursor: pointer; color: var(--text2); border-bottom: 2px solid transparent; margin-bottom: -1px; font-weight: 500; }
+  .section-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .changelog-section { margin-top: 32px; }
+
+  /* Updates UX additions */
+  .detail-panel { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0; margin-top: 10px; display: none; overflow: hidden; }
+  .detail-panel.open { display: block; }
+  .detail-panel-content { padding: 14px 16px; font-size: 13px; color: var(--text2); line-height: 1.7; }
+  .detail-panel-content p { margin-bottom: 8px; }
+  .detail-link { display: inline-flex; align-items: center; gap: 4px; margin-top: 8px; font-size: 12px; font-weight: 600; color: var(--accent); }
+  .detail-link:hover { color: var(--accent-hover); }
+  .btn-done { background: rgba(34,197,94,0.2); color: var(--green); border: 1px solid rgba(34,197,94,0.4); font-size: 12px; font-weight: 600; padding: 7px 14px; border-radius: var(--radius-sm); cursor: pointer; transition: all 0.15s; }
+  .btn-done:hover { background: rgba(34,197,94,0.3); }
+  .done-hint { font-size: 11px; color: var(--text3); margin-left: 10px; }
+  .accept-panel-divider { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+  .declined-section { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px; }
+  .declined-toggle { font-size: 12px; color: var(--text3); cursor: pointer; display: inline-flex; align-items: center; gap: 5px; user-select: none; }
+  .declined-toggle:hover { color: var(--text2); }
+  .declined-list { margin-top: 10px; display: none; }
+  .declined-list.open { display: block; }
+  .declined-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: var(--surface2); border-radius: var(--radius-sm); margin-bottom: 6px; opacity: 0.6; }
+  .declined-item-label { font-size: 13px; color: var(--text2); }
+  .btn-undo { background: transparent; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 3px 10px; font-size: 11px; color: var(--text3); cursor: pointer; }
+  .btn-undo:hover { border-color: var(--accent); color: var(--accent); }
+  .refresh-btn { background: transparent; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 4px 10px; font-size: 11px; color: var(--text3); cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+  .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .next-check-note { font-size: 12px; color: var(--text3); margin-top: 6px; }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<nav id="sidebar" aria-label="Playbook sections">
+  <div class="sidebar-logo">
+    <h2>Guardrails</h2>
+    <p id="sidebar-version">v1.3.0 · AGM82</p>
+  </div>
+  <div class="nav-section-label">Reference</div>
+  <a class="nav-item active" role="button" tabindex="0" aria-current="page" onclick="showSection('instructions', this)" onkeydown="navKeydown(event)">
+    <span class="nav-dot"></span> Instructions
+  </a>
+  <div class="nav-section-label">Live</div>
+  <a class="nav-item" role="button" tabindex="0" onclick="showSection('updates', this)" onkeydown="navKeydown(event)">
+    <span class="nav-dot"></span> Updates
+  </a>
+  <a class="nav-item" role="button" tabindex="0" onclick="showSection('projects', this)" onkeydown="navKeydown(event)">
+    <span class="nav-dot"></span> Projects
+  </a>
+  <div class="nav-section-label">Tools</div>
+  <a class="nav-item" role="button" tabindex="0" onclick="showSection('research', this)" onkeydown="navKeydown(event)">
+    <span class="nav-dot"></span> Research
+  </a>
+  <a class="nav-item" role="button" tabindex="0" onclick="showSection('health', this)" onkeydown="navKeydown(event)">
+    <span class="nav-dot"></span> Health Check
+  </a>
+  <a class="nav-item" role="button" tabindex="0" onclick="showSection('prompts', this)" onkeydown="navKeydown(event)">
+    <span class="nav-dot"></span> Prompt Library
+  </a>
+  <div class="nav-section-label">Knowledge</div>
+  <a class="nav-item" role="button" tabindex="0" onclick="showSection('knowledge', this)" onkeydown="navKeydown(event)">
+    <span class="nav-dot"></span> Why? / Knowledge Base
+  </a>
+</nav>
+
+<!-- Settings bar -->
+<div id="main">
+<div id="settings-bar">
+  <label>Reference clone path on this machine:</label>
+  <input type="text" id="template-path-input" placeholder="e.g. C:\Users\you\Projects\cursor-guardrails" />
+  <button class="save-btn" onclick="savePath()">Save</button>
+  <span class="path-saved" id="path-saved">Saved</span>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION 1: INSTRUCTIONS
+═══════════════════════════════════════════════════════════ -->
+<div id="section-instructions" class="section active">
+  <div class="section-header">
+    <div class="section-title">Instructions</div>
+    <div class="section-desc">Everything you need to start a new project or adopt guardrails on an existing one. All prompts are pre-filled with your template path.</div>
+  </div>
+
+  <h3>What cursor-guardrails is</h3>
+  <p>A reusable project template that makes good engineering habits automatic. Written rules are <strong>advice</strong>; this template puts the real weight into checks a machine enforces and nobody can skip. <a href="https://github.com/AGM82/cursor-guardrails" target="_blank">github.com/AGM82/cursor-guardrails</a></p>
+
+  <h3>The 7 guardrail tiers</h3>
+  <table>
+    <thead><tr><th>Tier</th><th>Mechanism</th><th>Lives in</th><th>Type</th></tr></thead>
+    <tbody>
+      <tr><td><strong>0 — Workflow</strong></td><td>Plan Mode (Shift+Tab); plans saved to <code>.cursor/plans/</code></td><td>Cursor</td><td><span class="tier-col-type"><span class="tier-dot" style="background:var(--text3)"></span>Discipline</span></td></tr>
+      <tr><td><strong>1 — Advisory</strong></td><td>Rules in <code>.cursor/rules/*.mdc</code>; cross-tool summary in <code>AGENTS.md</code></td><td>Repo</td><td><span class="tier-col-type"><span class="tier-dot" style="background:var(--blue)"></span>Advisory</span></td></tr>
+      <tr><td><strong>2 — Toolchain</strong></td><td>TypeScript strict, ESLint (security + a11y), Prettier, commitlint, tests</td><td>Repo</td><td><span class="tier-col-type"><span class="tier-dot" style="background:var(--green)"></span>Deterministic</span></td></tr>
+      <tr><td><strong>3 — Runtime</strong></td><td>Cursor hooks gate shell commands and secret reads; audit log</td><td>Repo</td><td><span class="tier-col-type"><span class="tier-dot" style="background:var(--green)"></span>Deterministic</span></td></tr>
+      <tr><td><strong>4 — Automation</strong></td><td>Husky + lint-staged + gitleaks pre-commit; CI (typecheck, lint, test, build, audit, secret scan, SAST)</td><td>Repo/CI</td><td><span class="tier-col-type"><span class="tier-dot" style="background:var(--green)"></span>Deterministic</span></td></tr>
+      <tr><td><strong>5 — Workflows</strong></td><td>Slash commands: <code>/review</code>, <code>/audit</code>, <code>/pr</code>, <code>/update-deps</code>, <code>/guardrail-upgrade</code></td><td>Repo</td><td><span class="tier-col-type"><span class="tier-dot" style="background:var(--purple)"></span>Workflow</span></td></tr>
+      <tr><td><strong>6 — Review</strong></td><td>Agent Review, Bugbot on PRs, TDD for logic-heavy work</td><td>Cursor/CI</td><td><span class="tier-col-type"><span class="tier-dot" style="background:var(--yellow)"></span>Safety net</span></td></tr>
+    </tbody>
+  </table>
+
+  <h3>The 5 slash commands</h3>
+  <table>
+    <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>/review</code></td><td>Run checks and review staged changes; report by severity before fixing anything</td></tr>
+      <tr><td><code>/audit</code></td><td>Whole-repo, point-in-time health audit — not scoped to a diff</td></tr>
+      <tr><td><code>/pr</code></td><td>Confirm checks pass, write a Conventional Commit, push, and open a pull request</td></tr>
+      <tr><td><code>/update-deps</code></td><td>Update dependencies one at a time, re-testing after each</td></tr>
+      <tr><td><code>/guardrail-upgrade</code></td><td>Layers 0–7: bootstrap → profile → gap analysis → upgrade → code audit → governance</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Hard stops (always)</h3>
+  <ul>
+    <li>No secrets, credentials, or real client/personal data in source, logs, or commits</li>
+    <li>Validate input at every trust boundary; use parameterised queries only</li>
+    <li>Never log personal information</li>
+    <li>Do not modify tests to make failing code pass</li>
+    <li>Do not disable a linter or type rule to silence an error — fix the cause</li>
+    <li>CI enforces coverage thresholds (lines ≥ 80%, functions ≥ 80%, branches ≥ 70%) — do not merge code that drops below them</li>
+    <li>Never commit or push directly to <code>main</code> — use a feature branch and <code>/pr</code></li>
+  </ul>
+
+  <div style="margin-top: 32px;">
+    <p style="font-size:12px; color:var(--text2); background:var(--surface2); border-radius:var(--radius-sm); padding:10px 12px; margin-bottom:14px;"><strong>Which tab do I want?</strong> <em>Start a new project</em> if you're creating a brand-new repo. <em>Adopt on existing project</em> (Path A — direct) if you want guardrails on an existing project with minimal setup. <em>Via Throughline</em> (Path B) if that project needs a documented risk tier or governance evidence — Path B is Path A with Throughline supplying the profile instead of 3 questions. Full step-by-step for both: <a href="https://github.com/AGM82/cursor-guardrails/blob/main/docs/connect-guardrails.md" target="_blank">docs/connect-guardrails.md</a>.</p>
+    <div class="section-tabs" role="tablist" aria-label="Adoption path">
+      <div class="section-tab active" role="tab" tabindex="0" aria-selected="true" aria-controls="tab-new-project" onclick="showTab('new-project', this)" onkeydown="navKeydown(event)">Start a new project</div>
+      <div class="section-tab" role="tab" tabindex="0" aria-selected="false" aria-controls="tab-existing-project" onclick="showTab('existing-project', this)" onkeydown="navKeydown(event)">Adopt on existing project</div>
+      <div class="section-tab" role="tab" tabindex="0" aria-selected="false" aria-controls="tab-throughline" onclick="showTab('throughline', this)" onkeydown="navKeydown(event)">Via Throughline</div>
+    </div>
+
+    <div id="tab-new-project" role="tabpanel">
+      <h3>Start a new project from the template</h3>
+      <p style="font-size:12px; color:var(--text2); background:var(--surface2); border-radius:var(--radius-sm); padding:10px 12px; margin-bottom:14px;"><strong>Before you start:</strong> you need a free <a href="https://github.com/signup" target="_blank">GitHub account</a> and <a href="https://cursor.com/downloads" target="_blank">Cursor</a> installed. No other software is required — Cursor can clone repositories for you without a separate Git install.</p>
+      <p style="font-size:12px; color:var(--text2); background:var(--surface2); border-radius:var(--radius-sm); padding:10px 12px; margin-bottom:14px;"><strong>Why "Use this template" here, but a plain clone on the other tab?</strong> They serve different purposes. Here you're creating your <em>own independent repo</em> — "Use this template" is correct, and it intentionally has no live link back to <code>cursor-guardrails</code>. To pull in future guardrail improvements later, keep a separate <strong>reference clone</strong> (a plain <code>git clone</code> of <code>cursor-guardrails</code> itself — see the <em>Adopt on existing project</em> tab) and run <code>/guardrail-upgrade</code> inside this project. Same tool, same result as adopting on an existing project.</p>
+      <table>
+        <thead><tr><th>#</th><th>Step</th><th>Detail</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><strong>Use this template</strong></td><td>Go to <a href="https://github.com/AGM82/cursor-guardrails" target="_blank">github.com/AGM82/cursor-guardrails</a> → <strong>Use this template</strong> → Create a new repository</td></tr>
+          <tr><td>2</td><td><strong>Clone it to your computer</strong></td><td>In Cursor: Command Palette (<code>Ctrl+Shift+P</code> / <code>Cmd+Shift+P</code>) → <code>Git: Clone</code> → paste your new repo's URL → pick a folder. (Or, if you're comfortable with a terminal: <code>git clone &lt;url&gt;</code>.) This downloads the repo from GitHub onto your machine — you can't skip this step.</td></tr>
+          <tr><td>3</td><td><strong>Open in Cursor</strong></td><td>File → Open Folder → pick the folder you just cloned → Trust the workspace</td></tr>
+          <tr><td>4</td><td><strong>Match Node version</strong></td><td>Node.js is the runtime this project's tools (linting, tests, build) run on. Open a terminal (Terminal → New Terminal) and run <code>nvm use</code> if you have <code>nvm</code> installed — otherwise, install <a href="https://nodejs.org" target="_blank">Node 20 LTS from nodejs.org</a> directly and skip this command.</td></tr>
+          <tr><td>5</td><td><strong>Install</strong></td><td><code>npm install</code> in the same terminal — installs tools and activates Git hooks</td></tr>
+          <tr><td>6</td><td><strong>Verify</strong></td><td>Run <code>npm run typecheck</code>, then <code>npm run lint</code>, then <code>npm run test</code>, one at a time (on Windows, plain PowerShell can't chain them with <code>&amp;&amp;</code> — PowerShell 7+ can). CI also runs <code>test -- --coverage</code>; if anything fails, ask the Cursor agent to fix it before continuing.</td></tr>
+          <tr><td>7</td><td><strong>Fill in context</strong></td><td>Open <code>.cursor/rules/90-project-context.mdc</code> and replace every &lt;PLACEHOLDER&gt; — or use the "Generate 90-project-context.mdc" prompt in the <strong>Prompt Library</strong> tab and let the AI draft it from a plain description of your project</td></tr>
+          <tr><td>8</td><td><strong>Commit and push</strong></td><td>Commit your changes and push to GitHub — this triggers the first CI run, which step 9 needs to have completed at least once</td></tr>
+          <tr><td>9</td><td><strong>Enable branch protection</strong></td><td>Wait for the CI run from step 8 to go green under the <strong>Actions</strong> tab (its 3 checks won't be selectable until then), then GitHub Settings → Branches → Add branch ruleset → require all 3 checks on <code>main</code>. Note: on a free personal GitHub account, rulesets only enforce on <strong>public</strong> repositories.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div id="tab-existing-project" role="tabpanel" style="display:none;">
+      <h3>Adopt on an existing project — quickstart (Path A, direct)</h3>
+      <p style="font-size:12px; color:var(--text2); background:var(--surface2); border-radius:var(--radius-sm); padding:10px 12px; margin-bottom:14px;"><strong>Two folders are involved:</strong> the project you want to upgrade (call it <strong>Project X</strong>) and a separate local clone of the <em>cursor-guardrails repo itself</em> — its <strong>reference clone</strong>. The reference clone is only there so the agent has something to copy files from — you never open it or work inside it.</p>
+      <p style="font-size:12px; color:var(--text2); background:var(--surface2); border-radius:var(--radius-sm); padding:10px 12px; margin-bottom:14px;"><strong>Don't have a reference clone yet?</strong> Create it once, anywhere outside Project X:<br><code>git clone https://github.com/AGM82/cursor-guardrails</code><br>Use a plain clone — <strong>not</strong> the "Use this template" button from the other tab. That button is for starting a brand-new project; it makes a disconnected copy with no link back to this repo, so it could never receive updates. A reference clone stays linked, so <code>/guardrail-upgrade</code> can refresh it.</p>
+      <p style="font-size:12px; color:var(--text2); background:var(--surface2); border-radius:var(--radius-sm); padding:10px 12px; margin-bottom:14px;"><strong>Staying current:</strong> the version shown at the top of this page is always the latest published template version. Your local reference clone only reflects that once you pull it — but you don't have to do this by hand: the Bootstrap prompt below and the <code>/guardrail-upgrade</code> command both refresh it automatically (<code>git pull --ff-only</code>) at the start of every run, before copying anything from it.</p>
+      <table>
+        <thead><tr><th>#</th><th>Step</th><th>Detail</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><strong>Fill in the reference clone path</strong></td><td>At the top of this page, set <strong>"Reference clone path on this machine"</strong> to where you cloned <code>cursor-guardrails</code> (not Project X). The prompt below is pre-filled from it.</td></tr>
+          <tr><td>2</td><td><strong>Paste the prompt</strong></td><td>Open Project X in Cursor, start a new Agent chat, and paste the <strong>Bootstrap prompt</strong> below. It works day zero — nothing needs to be in place first, and it refreshes your reference clone before using it.</td></tr>
+          <tr><td>3</td><td><strong>Answer 3 quick questions, then approve layers</strong></td><td>The agent asks about the project's type, risk level, and existing toolchain, then recommends which layers to apply based on the answers — not everything, and not identical for every project. Reply <code>all</code> instead if you'd rather apply everything in one pass. (Skipped automatically if a Throughline <code>guardrail-prescription.json</code> is found — see the <em>Via Throughline</em> tab.)</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Bootstrap prompt — paste into Cursor Agent chat</h3>
+      <div class="copy-block">
+        <pre id="bootstrap-prompt">Upgrade this project from the cursor-guardrails template.
+
+Template path:
+TEMPLATE_PATH_PLACEHOLDER
+
+Follow this workflow:
+1. Verify the template path is a git clone and refresh it so nothing below reads a stale snapshot: run `git -C "TEMPLATE_PATH" pull --ff-only origin main`. If the folder does not exist or is not a git repo, tell me to run `git clone https://github.com/AGM82/cursor-guardrails "TEMPLATE_PATH"` once (not GitHub's "Use this template" button — that can't receive updates), then stop and wait for me to confirm before continuing. If the pull fails for another reason, compare TEMPLATE_PATH/.cursor/guardrail-version against the published version at raw.githubusercontent.com/AGM82/cursor-guardrails/main/.cursor/guardrail-version, warn me if it's behind, and continue anyway.
+2. Copy .cursor/commands/ from the template into this project (create the folder if it does not exist).
+3. Capture a pre-upgrade baseline: run typecheck, lint, build, and test (skip any that do not exist). Save output to .cursor/guardrail-baseline.log.
+4. Commit everything as: chore: snapshot before guardrail upgrade
+5. Check for guardrail-prescription.json (project root, then .cursor/) — if found, use its tier and requiredLayers directly and skip the questions below. Otherwise ask me 3 quick questions to build a project profile: project type (frontend-ui / backend-api / full-stack / library-or-cli / script-or-prototype), risk level (Low / Medium / High), and whether I already have my own ESLint/Prettier/tsconfig setup. Use TEMPLATE_PATH/guardrail-layers.json -> projectProfiles and riskTiers to turn my answers into a recommended layer set.
+6. Compare both projects and show a gap analysis table by layer, alongside the recommended layer set from step 5.
+7. Ask me which layers to apply before changing anything.
+8. Never overwrite src/, package.json, or tsconfig.json — merge only.
+9. After the approved layers: run a code compliance audit (Layer 6) and report Blocker / Should-fix / Nit findings. Fix blockers before finishing.
+10. Show the Layer 7 governance checklist.</pre>
+        <button class="copy-btn" onclick="copyEl('bootstrap-prompt', this)">Copy</button>
+      </div>
+
+      <p style="font-size:12px; color:var(--text2); background:var(--surface2); border-radius:var(--radius-sm); padding:10px 12px; margin: 14px 0;">Once adopted, this is repeatable: run <code>/audit</code> any time for a whole-codebase health check, and re-run <code>/guardrail-upgrade</code> later to detect drift against a newer template version.</p>
+
+      <h3>Reference — what the agent does at each layer</h3>
+      <p style="font-size:12px; color:var(--text2);">You don't need to read this to get started — it's what the prompt above walks the agent through, for when you want to see what it's about to do or hold off on a specific layer.</p>
+      <table>
+        <thead><tr><th>Layer</th><th>What happens</th><th>Risk</th></tr></thead>
+        <tbody>
+          <tr><td><strong>0 — Bootstrap</strong></td><td>Refresh the reference clone (<code>git pull --ff-only</code>), then copy <code>.cursor/commands/</code> from it if missing</td><td><span class="badge badge-safe">Safe</span></td></tr>
+          <tr><td><strong>0.5 — Baseline</strong></td><td>Capture current typecheck/lint errors before any changes</td><td><span class="badge badge-safe">Safe</span></td></tr>
+          <tr><td><strong>0.6 — Snapshot</strong></td><td>Git commit as a safe undo point</td><td><span class="badge badge-safe">Safe</span></td></tr>
+          <tr><td><strong>0.4 — Project profile</strong></td><td>Uses a Throughline <code>guardrail-prescription.json</code> if found; otherwise asks 3 questions (type, risk, existing toolchain) to recommend a tailored layer set instead of "apply all"</td><td><span class="badge badge-safe">Safe</span></td></tr>
+          <tr><td><strong>1 — AI rules</strong></td><td>Copy <code>.cursor/</code> rules, hooks, commands; <code>AGENTS.md</code></td><td><span class="badge badge-safe">Safe</span></td></tr>
+          <tr><td><strong>2 — Git hygiene</strong></td><td>Copy <code>.gitattributes</code>, <code>.editorconfig</code>, <code>.nvmrc</code>, <code>.npmrc</code>, GitHub files</td><td><span class="badge badge-safe">Safe</span></td></tr>
+          <tr><td><strong>3 — Commit discipline</strong></td><td>Install commitlint + Husky + lint-staged</td><td><span class="badge badge-safe">Safe</span></td></tr>
+          <tr><td><strong>4 — Toolchain</strong></td><td>Merge ESLint, TypeScript strict, Prettier</td><td><span class="badge badge-merge">Merge carefully</span></td></tr>
+          <tr><td><strong>5 — CI pipeline</strong></td><td>Add/merge GitHub Actions jobs: secret-scan, SAST, audit</td><td><span class="badge badge-merge">Merge carefully</span></td></tr>
+          <tr><td><strong>6 — Code audit</strong></td><td>Align existing code with installed rules; fix Blockers</td><td><span class="badge badge-merge">Merge carefully</span></td></tr>
+          <tr><td><strong>7 — Governance</strong></td><td>Enable branch protection; PR-only workflow; version file</td><td><span class="badge badge-safe">Safe</span></td></tr>
+        </tbody>
+      </table>
+
+      <p style="font-size:12px; color:var(--text2); margin-top:14px;">Power users only: a <a href="#" onclick="togglePsBootstrap(); return false;">PowerShell one-liner</a> can copy Layer 0 (just the <code>.cursor/commands/</code> folder) without an agent chat — you'd still type <code>/guardrail-upgrade</code> afterward for everything else. Most people should just use the Bootstrap prompt above.</p>
+      <div id="ps-bootstrap-wrap" style="display:none;">
+        <div class="copy-block">
+          <pre id="ps-bootstrap">$template = "TEMPLATE_PATH_PLACEHOLDER"
+$dest = ".cursor\commands"
+New-Item -ItemType Directory -Force -Path $dest | Out-Null
+Copy-Item "$template\.cursor\commands\*" $dest -Recurse -Force
+Write-Host "Commands bootstrapped. Now type /guardrail-upgrade in Cursor chat."</pre>
+          <button class="copy-btn" onclick="copyEl('ps-bootstrap', this)">Copy</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-throughline" role="tabpanel" style="display:none;">
+      <h3>Adopt via Throughline — quickstart (Path B)</h3>
+      <p style="font-size:12px; color:var(--text2); background:var(--surface2); border-radius:var(--radius-sm); padding:10px 12px; margin-bottom:14px;"><strong>What this adds over Path A:</strong> Path B is Path A with one difference — instead of answering <code>/guardrail-upgrade</code>'s 3 profiling questions yourself, <a href="https://github.com/AGM82/throughline" target="_blank">Throughline</a> classifies the project deterministically (its Schedule A risk rubric) and hands the resulting tier + required layers to <code>/guardrail-upgrade</code> as a small file. Same executor, same reference clone, same result — just an auditable classification instead of a manual answer.</p>
+      <p style="font-size:12px; color:var(--text2); background:var(--surface2); border-radius:var(--radius-sm); padding:10px 12px; margin-bottom:14px;"><strong>Use this when:</strong> the project needs a documented risk tier, governance evidence, or the CTO-facing lifecycle story — not just guardrails applied. Otherwise, the <em>Adopt on existing project</em> tab alone is enough.</p>
+      <table>
+        <thead><tr><th>#</th><th>Step</th><th>Detail</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><strong>Classify in Throughline</strong></td><td>Describe Project X in Throughline. Its deterministic classifier returns a risk tier (Low / Medium / High) and, via the vendored <code>guardrail-layers.json</code>, the required layers for that tier.</td></tr>
+          <tr><td>2</td><td><strong>Download the prescription</strong></td><td>From Throughline's Build Package, download <code>guardrail-prescription.json</code>.</td></tr>
+          <tr><td>3</td><td><strong>Drop it into Project X</strong></td><td>Save it at the project root (or <code>.cursor/</code>).</td></tr>
+          <tr><td>4</td><td><strong>Run <code>/guardrail-upgrade</code></strong></td><td>Bootstrap first via the <em>Adopt on existing project</em> tab if this is day zero. The command detects the prescription automatically, warns if it's stale against the reference clone's version, and uses its tier and layers directly — no profiling questions asked.</td></tr>
+          <tr><td>5</td><td><strong>Approve layers and verify</strong></td><td>Same as Path A — review the gap analysis, approve, then run <code>npm run typecheck</code> / <code>lint</code> / <code>test</code>.</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:12px; color:var(--text2); background:var(--surface2); border-radius:var(--radius-sm); padding:10px 12px; margin: 14px 0;">Guardrail <strong>files</strong> (rules, hooks, CI, toolchain) always come directly from the reference clone via <code>/guardrail-upgrade</code> — never through Throughline. Throughline only ever supplies the <strong>prescription</strong> (which layers, and why). Full detail: <a href="https://github.com/AGM82/cursor-guardrails/blob/main/docs/connect-guardrails.md" target="_blank">docs/connect-guardrails.md</a> and <a href="https://github.com/AGM82/cursor-guardrails/blob/main/docs/guardrail-prescription.md" target="_blank">docs/guardrail-prescription.md</a>.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION 2: UPDATES
+═══════════════════════════════════════════════════════════ -->
+<div id="section-updates" class="section">
+  <div class="section-header">
+    <div class="section-title">Updates</div>
+    <div class="section-desc">Automated findings from the cursor-guardrails template itself. Auto-fixable items create PRs directly. Human-decision items and AI pattern suggestions appear below.</div>
+  </div>
+
+  <div style="background:rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.25); border-radius:var(--radius); padding:12px 16px; margin-bottom:20px; font-size:12px; color:var(--text2); line-height:1.6;">
+    <strong style="color:var(--accent);">Scope:</strong> These findings apply to the <strong>cursor-guardrails template repo</strong>, not downstream projects.
+    Node.js LTS, gitleaks, and Semgrep updates are auto-applied as PRs — review and merge on GitHub.
+    npm packages are handled by Dependabot. AI Suggestions are generated by the bi-weekly Anthropic review.
+  </div>
+
+  <div class="section-tabs" id="updates-tabs" role="tablist" aria-label="Updates view">
+    <div class="section-tab active" role="tab" tabindex="0" aria-selected="true" aria-controls="tab-tool-updates" onclick="showUpdatesTab('tool-updates', this)" onkeydown="navKeydown(event)">Tool Updates</div>
+    <div class="section-tab" role="tab" tabindex="0" aria-selected="false" aria-controls="tab-ai-suggestions" onclick="showUpdatesTab('ai-suggestions', this)" onkeydown="navKeydown(event)">AI Suggestions</div>
+  </div>
+
+  <div id="tab-tool-updates" role="tabpanel">
+    <div id="updates-content"><div class="loading"><div class="spinner"></div> Loading from GitHub Issues…</div></div>
+    <div class="changelog-section">
+      <h3>Changelog</h3>
+      <div id="changelog-content"><div class="loading"><div class="spinner"></div> Loading releases…</div></div>
+    </div>
+  </div>
+
+  <div id="tab-ai-suggestions" role="tabpanel" style="display:none;">
+    <div id="ai-suggestions-content"><div class="loading"><div class="spinner"></div> Loading AI suggestions…</div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION 3: PROJECTS
+═══════════════════════════════════════════════════════════ -->
+<div id="section-projects" class="section">
+  <div class="section-header">
+    <div class="section-title">Projects</div>
+    <div class="section-desc">Registry of all projects using cursor-guardrails. Stored locally in your browser. Add each project once.</div>
+  </div>
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+    <span style="font-size:13px; color:var(--text2);">Template version: <strong id="template-ver">1.3.0</strong></span>
+    <div style="display:flex; gap:8px;">
+      <button class="btn btn-ghost" onclick="exportProjects()">Export JSON</button>
+      <button class="btn btn-ghost" onclick="importProjects()">Import JSON</button>
+      <button class="btn btn-primary" onclick="toggleAddForm()">+ Add project</button>
+    </div>
+  </div>
+
+  <div class="add-project-form" id="add-project-form">
+    <div class="form-row">
+      <div class="form-field"><label>Project name</label><input type="text" id="proj-name" placeholder="my-app"></div>
+      <div class="form-field"><label>Guardrail version</label><input type="text" id="proj-version" placeholder="1.3.0 (from .cursor/guardrail-version)"></div>
+      <div class="form-field"><label>Layers active</label><input type="text" id="proj-layers" placeholder="0–7"></div>
+      <div class="form-field"><label>Last upgraded</label><input type="date" id="proj-date"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field" style="flex:2;"><label>Notes</label><input type="text" id="proj-notes" placeholder="Optional notes"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" onclick="addProject()">Save project</button>
+      <button class="btn btn-ghost" onclick="toggleAddForm()">Cancel</button>
+    </div>
+  </div>
+
+  <div id="projects-table-wrap"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION 4: RESEARCH
+═══════════════════════════════════════════════════════════ -->
+<div id="section-research" class="section">
+  <div class="section-header">
+    <div class="section-title">Research</div>
+    <div class="section-desc">Trigger an on-demand AI investigation into any tool or topic. Results open as a new GitHub issue labelled <code>ai-investigation</code> once the workflow completes.</div>
+  </div>
+
+  <!-- PAT setup -->
+  <div class="card" style="margin-bottom:20px;">
+    <h3 style="margin:0 0 10px; font-size:14px; color:var(--text);">GitHub access token</h3>
+    <p style="font-size:12px; color:var(--text2); margin-bottom:12px; line-height:1.6;">
+      A personal access token (PAT) with <code>workflow</code> scope is required to trigger investigations from this UI.
+      Kept only in this browser <strong>tab's</strong> session storage — never sent anywhere except GitHub's API,
+      and cleared automatically when you close the tab. Click <strong>Clear</strong> to remove it sooner.
+      <a href="https://github.com/settings/tokens/new?scopes=workflow&description=cursor-guardrails+playbook" target="_blank" style="color:var(--accent);">Generate one here →</a>
+    </p>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <label for="github-pat" class="visually-hidden">GitHub personal access token</label>
+      <input type="password" id="github-pat" placeholder="ghp_••••••••••••••••••••••••••••••••••••••" autocomplete="off"
+        style="flex:1; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:8px 12px; color:var(--text); font-size:13px; font-family:monospace;"
+        onkeydown="if(event.key==='Enter') savePat()" />
+      <button class="btn btn-primary" onclick="savePat()">Save</button>
+      <button class="btn btn-ghost" onclick="clearPat()">Clear</button>
+      <span id="pat-status" role="status" style="font-size:12px; color:var(--text3);">Not set</span>
+    </div>
+  </div>
+
+  <!-- Investigation form -->
+  <div class="card" style="margin-bottom:20px;">
+    <h3 style="margin:0 0 10px; font-size:14px; color:var(--text);">Investigate a tool or topic</h3>
+    <p style="font-size:12px; color:var(--text2); margin-bottom:14px; line-height:1.6;">
+      Enter any tool, framework, or technology. The AI will apply the <strong>50-ai-tooling.mdc</strong>
+      evaluation framework and return a structured verdict: <strong>Add / Watch / Reject</strong> — with evidence, not vendor claims.
+    </p>
+    <div style="display:flex; gap:8px; margin-bottom:10px;">
+      <input type="text" id="research-topic" placeholder="e.g. Windsurf IDE, shadcn/ui, Zed editor, Deno 2…"
+        style="flex:1; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:8px 12px; color:var(--text); font-size:13px;"
+        onkeydown="if(event.key==='Enter') runInvestigation()" />
+      <button class="btn btn-primary" onclick="runInvestigation()" id="research-run-btn">Run investigation</button>
+    </div>
+
+    <!-- Quick-pick suggestions -->
+    <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px;">
+      <span style="font-size:11px; color:var(--text3); padding-top:2px;">Quick picks:</span>
+      <button class="btn" style="font-size:11px; padding:3px 10px;" onclick="setResearchTopic('Windsurf IDE')">Windsurf IDE</button>
+      <button class="btn" style="font-size:11px; padding:3px 10px;" onclick="setResearchTopic('Zed editor')">Zed editor</button>
+      <button class="btn" style="font-size:11px; padding:3px 10px;" onclick="setResearchTopic('Cline (AI coding agent)')">Cline</button>
+      <button class="btn" style="font-size:11px; padding:3px 10px;" onclick="setResearchTopic('Biome (ESLint alternative)')">Biome</button>
+      <button class="btn" style="font-size:11px; padding:3px 10px;" onclick="setResearchTopic('Bun runtime')">Bun</button>
+      <button class="btn" style="font-size:11px; padding:3px 10px;" onclick="setResearchTopic('Playwright')">Playwright</button>
+    </div>
+
+    <div id="research-status" role="status" aria-live="polite" style="display:none; padding:12px; background:var(--surface2); border-radius:6px; font-size:13px;"></div>
+  </div>
+
+  <!-- Recent investigations -->
+  <div class="card">
+    <h3 style="margin:0 0 10px; font-size:14px; color:var(--text);">Recent investigations</h3>
+    <div id="research-history" style="font-size:12px; color:var(--text2);"><em>No investigations run yet.</em></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION 5: HEALTH CHECK
+═══════════════════════════════════════════════════════════ -->
+<div id="section-health" class="section">
+  <div class="section-header">
+    <div class="section-title">Health Check</div>
+    <div class="section-desc">Pre-flight checklist before starting work on a project. Tick each item as you confirm it. Resets when you clear it.</div>
+  </div>
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+    <div>Score: <span class="health-score" id="health-score" style="background:var(--surface2); color:var(--text3);">0 / 8</span></div>
+    <button class="btn btn-ghost" onclick="resetHealth()">Reset checklist</button>
+  </div>
+  <div id="health-list">
+    <div class="health-item" data-id="branch"><div class="health-check" onclick="toggleHealth(this)"></div><div class="health-label"><strong>Branch protection active on <code>main</code></strong><br><span style="color:var(--text3); font-size:12px;">Settings → Branches → ruleset with 3 required checks</span></div></div>
+    <div class="health-item" data-id="version"><div class="health-check" onclick="toggleHealth(this)"></div><div class="health-label"><strong>Guardrail version matches current template</strong><br><span style="color:var(--text3); font-size:12px;">Check <code>.cursor/guardrail-version</code> — should read <strong id="health-version-label">1.3.0</strong></span></div></div>
+    <div class="health-item" data-id="dependabot"><div class="health-check" onclick="toggleHealth(this)"></div><div class="health-label"><strong>No open Dependabot PRs failing CI</strong><br><span style="color:var(--text3); font-size:12px;">Review open PRs; close grouped PRs that fail — update individually</span></div></div>
+    <div class="health-item" data-id="ci"><div class="health-check" onclick="toggleHealth(this)"></div><div class="health-label"><strong>CI last run on <code>main</code> is green</strong><br><span style="color:var(--text3); font-size:12px;">Check the Actions tab — all 3 jobs should be passing</span></div></div>
+    <div class="health-item" data-id="context"><div class="health-check" onclick="toggleHealth(this)"></div><div class="health-label"><strong><code>90-project-context.mdc</code> has no &lt;PLACEHOLDER&gt;</strong><br><span style="color:var(--text3); font-size:12px;">Open the file and confirm all sections are filled in for this project</span></div></div>
+    <div class="health-item" data-id="env"><div class="health-check" onclick="toggleHealth(this)"></div><div class="health-label"><strong><code>.env</code> is gitignored and not committed</strong><br><span style="color:var(--text3); font-size:12px;">Run <code>git status</code> — <code>.env</code> should not appear as tracked</span></div></div>
+    <div class="health-item" data-id="pr-only"><div class="health-check" onclick="toggleHealth(this)"></div><div class="health-label"><strong>Next change will go via feature branch + PR</strong><br><span style="color:var(--text3); font-size:12px;">No direct pushes to <code>main</code> — use <code>/pr</code> in Cursor chat</span></div></div>
+    <div class="health-item" data-id="anthropic-key"><div class="health-check" onclick="toggleHealth(this)"></div><div class="health-label"><strong><code>ANTHROPIC_API_KEY</code> is set in GitHub Secrets</strong><br><span style="color:var(--text3); font-size:12px;">Settings → Secrets and variables → Actions — required for the bi-weekly AI review to produce real suggestions instead of silently running on mock data</span></div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION 5: PROMPT LIBRARY
+═══════════════════════════════════════════════════════════ -->
+<div id="section-prompts" class="section">
+  <div class="section-header">
+    <div class="section-title">Prompt Library</div>
+    <div class="section-desc">Copy-ready agent prompts. All prompts that reference the template path are pre-filled with your saved path.</div>
+  </div>
+  <div id="prompt-list"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION 6: KNOWLEDGE BASE
+═══════════════════════════════════════════════════════════ -->
+<div id="section-knowledge" class="section">
+  <div class="section-header">
+    <div class="section-title">Why? / Knowledge Base</div>
+    <div class="section-desc">The real-world reasoning behind each guardrail decision. Prevents rules from feeling arbitrary and helps when onboarding a new project.</div>
+  </div>
+  <div id="kb-list"></div>
+</div>
+
+</div><!-- #main -->
+
+<script>
+// ─── State helpers ────────────────────────────────────────────────────────────
+const REPO = 'AGM82/cursor-guardrails';
+
+// Fetch live version from guardrail-layers.json so no version number is ever hardcoded.
+let TEMPLATE_VERSION = '1.3.0'; // fallback; overwritten by manifest fetch below
+(async () => {
+  try {
+    const manifest = await fetch(
+      `https://raw.githubusercontent.com/${REPO}/main/guardrail-layers.json`
+    ).then(r => r.json());
+    if (manifest && manifest.guardrailVersion) {
+      const v = manifest.guardrailVersion;
+      TEMPLATE_VERSION = v;
+      const patch = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+      patch('sidebar-version', `v${v} · AGM82`);
+      patch('template-ver', v);
+      patch('health-version-label', v);
+      const projVerInput = document.getElementById('proj-version');
+      if (projVerInput) projVerInput.placeholder = `${v} (from .cursor/guardrail-version)`;
+      renderProjects();   // recalculate current/behind with updated TEMPLATE_VERSION
+      renderAllPrompts(); // re-render prompts so TEMPLATE_VER_PLACEHOLDER resolves
+    }
+  } catch { /* fall back to the hardcoded value */ }
+})();
+const API = 'https://api.github.com/repos/' + REPO;
+
+// Escapes text before it is interpolated into an innerHTML template literal.
+// Used wherever a value can come from outside this script's own static
+// strings — GitHub API content (issue titles, error messages), user-typed
+// input (research topic, project name/notes), etc.
+function escHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  })[c]);
+}
+
+function getPath() { return localStorage.getItem('templatePath') || ''; }
+// Replaces TEMPLATE_PATH_PLACEHOLDER and TEMPLATE_VER_PLACEHOLDER in prompt text at render time,
+// so neither the path nor the version ever needs to be hardcoded inside a prompt string.
+function fillPath(str) {
+  return str
+    .replace(/TEMPLATE_PATH_PLACEHOLDER/g, getPath() || 'YOUR_TEMPLATE_PATH')
+    .replace(/TEMPLATE_VER_PLACEHOLDER/g, TEMPLATE_VERSION);
+}
+
+function savePath() {
+  const val = document.getElementById('template-path-input').value.trim();
+  localStorage.setItem('templatePath', val);
+  renderAllPrompts();
+  renderBootstrapPrompts();
+  const saved = document.getElementById('path-saved');
+  saved.style.display = 'inline';
+  setTimeout(() => saved.style.display = 'none', 2000);
+}
+
+// ─── Navigation ───────────────────────────────────────────────────────────────
+// Shared keyboard handler so role="button" elements (nav items, tabs) respond
+// to Enter/Space the same way native buttons do.
+function navKeydown(e) {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    e.target.click();
+  }
+}
+
+function showSection(id, el) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => { n.classList.remove('active'); n.removeAttribute('aria-current'); });
+  document.getElementById('section-' + id).classList.add('active');
+  if (el) { el.classList.add('active'); el.setAttribute('aria-current', 'page'); }
+  if (id === 'updates') loadUpdates();
+  if (id === 'projects') renderProjects();
+  if (id === 'research') initResearch();
+}
+
+function showUpdatesTab(tabId, el) {
+  document.getElementById('tab-tool-updates').style.display = tabId === 'tool-updates' ? '' : 'none';
+  document.getElementById('tab-ai-suggestions').style.display = tabId === 'ai-suggestions' ? '' : 'none';
+  document.querySelectorAll('#updates-tabs .section-tab').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); });
+  if (el) { el.classList.add('active'); el.setAttribute('aria-selected', 'true'); }
+  if (tabId === 'ai-suggestions') loadAiSuggestions();
+}
+
+function showTab(id, el) {
+  // Scoped to the enclosing .section so this never hides/deactivates tabs
+  // belonging to a different sidebar section (e.g. the Updates tabs).
+  const scope = el.closest('.section') || document;
+  scope.querySelectorAll('[id^="tab-"]').forEach(t => t.style.display = 'none');
+  scope.querySelectorAll('.section-tab').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); });
+  document.getElementById('tab-' + id).style.display = 'block';
+  el.classList.add('active');
+  el.setAttribute('aria-selected', 'true');
+}
+
+// ─── Copy helpers ─────────────────────────────────────────────────────────────
+function copyEl(id, btn) {
+  const text = document.getElementById(id).textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'Copied!'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+function copyText(text, btn) {
+  navigator.clipboard.writeText(fillPath(text)).then(() => {
+    btn.textContent = 'Copied!'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+// ─── Bootstrap prompts (path-aware) ───────────────────────────────────────────
+function renderBootstrapPrompts() {
+  const bp = document.getElementById('bootstrap-prompt');
+  const ps = document.getElementById('ps-bootstrap');
+  if (bp) bp.textContent = fillPath(bp.textContent.replace(/TEMPLATE_PATH_PLACEHOLDER/g, 'TEMPLATE_PATH_PLACEHOLDER'));
+  if (ps) ps.textContent = fillPath(ps.textContent.replace(/TEMPLATE_PATH_PLACEHOLDER/g, 'TEMPLATE_PATH_PLACEHOLDER'));
+  // Re-fill on render
+  if (bp) bp.textContent = fillPath(`Upgrade this project from the cursor-guardrails template.
+
+Template path:
+TEMPLATE_PATH_PLACEHOLDER
+
+Follow this workflow:
+1. Copy .cursor/commands/ from the template into this project (create the folder if it does not exist).
+2. Capture a pre-upgrade baseline: run typecheck, lint, build, and test (skip any that do not exist). Save output to .cursor/guardrail-baseline.log.
+3. Commit everything as: chore: snapshot before guardrail upgrade
+4. Compare both projects and show a gap analysis table by layer.
+5. Ask me which layers to apply before changing anything.
+6. Never overwrite src/, package.json, or tsconfig.json — merge only.
+7. After Layers 1-5: run a code compliance audit (Layer 6) and report Blocker / Should-fix / Nit findings. Fix blockers before finishing.
+8. Show the Layer 7 governance checklist.`);
+  if (ps) ps.textContent = fillPath(`$template = "TEMPLATE_PATH_PLACEHOLDER"
+$dest = ".cursor\\commands"
+New-Item -ItemType Directory -Force -Path $dest | Out-Null
+Copy-Item "$template\\.cursor\\commands\\*" $dest -Recurse -Force
+Write-Host "Commands bootstrapped. Now type /guardrail-upgrade in Cursor chat."`);
+}
+
+// ─── Updates section ──────────────────────────────────────────────────────────
+let updatesLoaded = false;
+let currentRunDate = null;
+
+async function loadUpdates() {
+  if (updatesLoaded) return;
+  updatesLoaded = true;
+  await Promise.all([loadFindings(), loadChangelog()]);
+}
+
+async function refreshUpdates() {
+  updatesLoaded = false;
+  currentRunDate = null;
+  document.getElementById('updates-content').innerHTML = '<div class="loading"><div class="spinner"></div> Refreshing…</div>';
+  await loadUpdates();
+}
+
+function nextMondayStr() {
+  const d = new Date();
+  const day = d.getDay();
+  const daysUntil = day === 1 ? 7 : (8 - day) % 7;
+  d.setDate(d.getDate() + daysUntil);
+  return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' });
+}
+
+function getDetailContent(f) {
+  const details = {
+    'eslint': {
+      what: 'ESLint is the JavaScript/TypeScript linter. This project uses ESLint 10 with plugins for security and accessibility.',
+      why: 'Minor updates fix bugs and add new rules. Major updates require checking that eslint-plugin-jsx-a11y and eslint-plugin-security are compatible before accepting — check the KB entry on major ESLint bumps.',
+    },
+    'typescript-eslint': {
+      what: 'typescript-eslint provides TypeScript-aware linting rules, bridging ESLint and the TypeScript compiler.',
+      why: 'Minor updates bring improved type-aware rules and bug fixes. The project pins to <code>^8.62.0</code> to avoid false positives from the weekly workflow — update the range in package.json when accepting.',
+    },
+    'nodejs': {
+      what: 'Node.js LTS is the runtime for all project tooling — build, lint, test, and hooks.',
+      why: 'Staying on LTS ensures security patches and broad tool compatibility. When updating, change <code>.nvmrc</code> and the <code>node-version</code> in <code>.github/workflows/ci.yml</code> to match.',
+    },
+    'gitleaks': {
+      what: 'gitleaks scans commits for secrets and credentials. The CI pipeline uses it as a Docker container — no local install needed.',
+      why: 'New releases include updated detection patterns for emerging secret formats. Update the image tag in <code>.github/workflows/ci.yml</code>.',
+    },
+  };
+  const d = details[f.id] || { what: f.action, why: 'See the GitHub release notes for details.' };
+  return `<p><strong>What it is:</strong> ${d.what}</p><p><strong>Why update:</strong> ${d.why}</p>`;
+}
+
+async function loadFindings() {
+  const el = document.getElementById('updates-content');
+  try {
+    const res = await fetch(`${API}/issues?labels=guardrail-review&state=open&per_page=1`);
+    const issues = await res.json();
+    if (!issues.length) {
+      el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">✅</div><p>No pending updates — all guardrails are current.</p><p class="next-check-note">Next automated check: <strong>${nextMondayStr()}</strong></p></div>`;
+      return;
+    }
+    const issue = issues[0];
+    const match = issue.body && issue.body.match(/<!--\s*guardrail-review-data\s*([\s\S]*?)-->/);
+    if (!match) {
+      el.innerHTML = `<div class="card"><p>Open issue found: <a href="${escHtml(issue.html_url)}" target="_blank">${escHtml(issue.title)}</a><br>No machine-readable data block found — <a href="${escHtml(issue.html_url)}" target="_blank">review manually on GitHub</a>.</p></div>`;
+      return;
+    }
+    const data = JSON.parse(match[1].trim());
+    currentRunDate = data.runDate;
+
+    const dismissed = JSON.parse(localStorage.getItem('dismissedUpdates') || '{}');
+    const done = JSON.parse(localStorage.getItem('doneUpdates') || '{}');
+    const accepted = JSON.parse(localStorage.getItem('acceptedUpdates') || '{}');
+
+    // Active = not dismissed AND not marked done for this specific runDate
+    const active = data.findings.filter(f => dismissed[f.id] !== data.runDate && done[f.id] !== data.runDate);
+    const declinedFindings = data.findings.filter(f => dismissed[f.id] === data.runDate);
+
+    let html = `<div class="update-status-bar">
+      <span>Run date: <strong>${escHtml(data.runDate)}</strong> · <a href="${escHtml(issue.html_url)}" target="_blank">Issue #${issue.number} →</a></span>
+      <button class="refresh-btn" onclick="refreshUpdates()">↻ Refresh</button>
+    </div>`;
+
+    if (!active.length) {
+      html += `<div class="empty-state"><div class="empty-state-icon">✅</div><p>All findings reviewed for ${data.runDate}.</p><p class="next-check-note">Next automated check: <strong>${nextMondayStr()}</strong></p></div>`;
+    } else {
+      active.forEach(f => {
+        const isAccepted = accepted[f.id] === data.runDate;
+        html += `<div class="update-card" id="card-${f.id}">
+          <div class="update-card-head">
+            <span class="update-card-name">${escHtml(f.label)}</span>
+            <span class="version-arrow">${escHtml(f.current)} → ${escHtml(f.latest)}</span>
+            <span class="badge badge-${f.severity}">${escHtml(f.severity)}</span>
+            ${isAccepted ? '<span class="badge badge-safe" id="badge-inprogress-${f.id}">✓ In progress</span>' : ''}
+          </div>
+          <div class="update-card-actions">
+            <button class="btn btn-accept" id="btn-accept-${f.id}" onclick="acceptFinding('${f.id}', '${data.runDate}', this)">${isAccepted ? '✓ View steps' : 'Accept'}</button>
+            <button class="btn btn-info" id="btn-detail-${f.id}" onclick="toggleDetailPanel('${f.id}')">Details ▼</button>
+            <button class="btn btn-decline" onclick="declineFinding('${f.id}', '${data.runDate}')">Decline</button>
+          </div>
+          <div class="accept-panel ${isAccepted ? 'open' : ''}" id="accept-${f.id}">
+            <div class="accept-panel-label">What to do</div>
+            <p style="font-size:12px; color:var(--text2); margin-bottom:12px; line-height:1.6;">${escHtml(f.action)}</p>
+            <div class="accept-panel-label">Run this in Cursor Agent chat</div>
+            <div class="copy-block"><pre id="cmd-${f.id}">${escHtml(fillPath(f.cursorCommand || f.action))}</pre><button class="copy-btn" onclick="copyEl('cmd-${f.id}', this)">Copy</button></div>
+            <div class="accept-panel-divider">
+              <button class="btn-done" onclick="doneFinding('${f.id}', '${data.runDate}')">✓ Mark as done</button>
+              <span class="done-hint">Run the command above in Cursor first, then mark done to dismiss this card</span>
+            </div>
+          </div>
+          <div class="detail-panel" id="detail-${f.id}">
+            <div class="detail-panel-content">
+              ${getDetailContent(f)}
+              <a href="${escHtml(f.moreInfoUrl)}" target="_blank" class="detail-link">View release notes on GitHub →</a>
+            </div>
+          </div>
+        </div>`;
+      });
+    }
+
+    if (declinedFindings.length) {
+      html += `<div class="declined-section">
+        <span class="declined-toggle" id="declined-toggle" onclick="toggleDeclined()">▶ Show ${declinedFindings.length} declined finding${declinedFindings.length > 1 ? 's' : ''}</span>
+        <div class="declined-list" id="declined-list">
+          ${declinedFindings.map(f => `
+            <div class="declined-item">
+              <span class="declined-item-label">${escHtml(f.label)} <span style="color:var(--text3);font-size:11px;">${escHtml(f.current)} → ${escHtml(f.latest)}</span></span>
+              <button class="btn-undo" onclick="undoDecline('${f.id}', '${data.runDate}')">Undo decline</button>
+            </div>`).join('')}
+        </div>
+      </div>`;
+    }
+
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = `<div class="card"><p style="color:var(--red)">Could not load updates: ${escHtml(e.message)}. <a href="https://github.com/${REPO}/issues?labels=guardrail-review" target="_blank">Check GitHub Issues directly.</a></p></div>`;
+  }
+}
+
+function acceptFinding(id, runDate, btn) {
+  const acc = JSON.parse(localStorage.getItem('acceptedUpdates') || '{}');
+  acc[id] = runDate;
+  localStorage.setItem('acceptedUpdates', JSON.stringify(acc));
+  const panel = document.getElementById('accept-' + id);
+  if (panel) panel.classList.add('open');
+  if (btn) btn.textContent = '✓ View steps';
+  const head = document.getElementById('card-' + id)?.querySelector('.update-card-head');
+  if (head && !head.querySelector('.badge-safe')) {
+    const badge = document.createElement('span');
+    badge.className = 'badge badge-safe';
+    badge.textContent = '✓ In progress';
+    head.appendChild(badge);
+  }
+}
+
+function doneFinding(id, runDate) {
+  const done = JSON.parse(localStorage.getItem('doneUpdates') || '{}');
+  done[id] = runDate;
+  localStorage.setItem('doneUpdates', JSON.stringify(done));
+  // Also clear accepted state for this finding so it doesn't persist to next run
+  const acc = JSON.parse(localStorage.getItem('acceptedUpdates') || '{}');
+  delete acc[id];
+  localStorage.setItem('acceptedUpdates', JSON.stringify(acc));
+  const card = document.getElementById('card-' + id);
+  if (card) {
+    card.style.opacity = '0';
+    card.style.transition = 'opacity 0.3s';
+    setTimeout(() => { card.remove(); checkAllReviewed(); }, 300);
+  }
+}
+
+function declineFinding(id, runDate) {
+  const dis = JSON.parse(localStorage.getItem('dismissedUpdates') || '{}');
+  dis[id] = runDate;
+  localStorage.setItem('dismissedUpdates', JSON.stringify(dis));
+  const card = document.getElementById('card-' + id);
+  if (card) {
+    card.style.opacity = '0';
+    card.style.transition = 'opacity 0.3s';
+    setTimeout(() => { card.remove(); checkAllReviewed(); }, 300);
+  }
+}
+
+function undoDecline(id, runDate) {
+  const dis = JSON.parse(localStorage.getItem('dismissedUpdates') || '{}');
+  delete dis[id];
+  localStorage.setItem('dismissedUpdates', JSON.stringify(dis));
+  refreshUpdates();
+}
+
+function toggleDetailPanel(id) {
+  const panel = document.getElementById('detail-' + id);
+  const btn = document.getElementById('btn-detail-' + id);
+  if (!panel) return;
+  panel.classList.toggle('open');
+  if (btn) btn.textContent = panel.classList.contains('open') ? 'Details ▲' : 'Details ▼';
+}
+
+function togglePsBootstrap() {
+  const wrap = document.getElementById('ps-bootstrap-wrap');
+  if (!wrap) return;
+  wrap.style.display = wrap.style.display === 'none' ? 'block' : 'none';
+}
+
+function toggleDeclined() {
+  const list = document.getElementById('declined-list');
+  const toggle = document.getElementById('declined-toggle');
+  if (!list || !toggle) return;
+  list.classList.toggle('open');
+  const open = list.classList.contains('open');
+  toggle.textContent = toggle.textContent.replace(open ? '▶' : '▼', open ? '▼' : '▶');
+}
+
+function checkAllReviewed() {
+  const remaining = document.querySelectorAll('#updates-content .update-card');
+  if (remaining.length > 0) return;
+  const el = document.getElementById('updates-content');
+  const declined = el.querySelector('.declined-section');
+  const statusBar = el.querySelector('.update-status-bar');
+  const emptyHtml = `<div class="empty-state"><div class="empty-state-icon">✅</div><p>All findings reviewed for ${currentRunDate || 'this week'}.</p><p class="next-check-note">Next automated check: <strong>${nextMondayStr()}</strong></p></div>`;
+  if (declined) declined.insertAdjacentHTML('beforebegin', emptyHtml);
+  else if (statusBar) statusBar.insertAdjacentHTML('afterend', emptyHtml);
+}
+
+async function loadChangelog() {
+  const el = document.getElementById('changelog-content');
+  try {
+    const res = await fetch(`${API}/releases?per_page=10`);
+    const releases = await res.json();
+    if (Array.isArray(releases) && releases.length) {
+      el.innerHTML = releases.map(r => `
+        <div class="changelog-entry">
+          <span class="changelog-tag">${r.tag_name}</span>
+          <span class="changelog-date">${r.published_at ? r.published_at.slice(0,10) : ''}</span>
+          <div class="changelog-body">${(r.body || 'No release notes.').replace(/\n/g,'<br>').slice(0,500)}${(r.body||'').length > 500 ? '… <a href="'+r.html_url+'" target="_blank">read more</a>' : ''}</div>
+        </div>`).join('');
+      return;
+    }
+    // Fallback to git tags when no GitHub releases exist yet
+    const tagsRes = await fetch(`${API}/tags?per_page=10`);
+    const tags = await tagsRes.json();
+    if (!Array.isArray(tags) || !tags.length) {
+      el.innerHTML = `<p style="color:var(--text3);">No releases yet. <a href="https://github.com/${REPO}/tags" target="_blank">View tags on GitHub →</a></p>`;
+      return;
+    }
+    el.innerHTML = tags.map(t => `
+      <div class="changelog-entry">
+        <span class="changelog-tag">${t.name}</span>
+        <a href="https://github.com/${REPO}/releases/tag/${t.name}" target="_blank" style="font-size:12px; margin-left:8px; color:var(--accent);">View on GitHub →</a>
+      </div>`).join('');
+  } catch(e) {
+    el.innerHTML = `<p style="color:var(--red)">Could not load changelog.</p>`;
+  }
+}
+
+// ─── AI Suggestions ───────────────────────────────────────────────────────────
+let aiSuggestionsLoaded = false;
+
+async function loadAiSuggestions() {
+  if (aiSuggestionsLoaded) return;
+  aiSuggestionsLoaded = true;
+  const el = document.getElementById('ai-suggestions-content');
+  try {
+    const res = await fetch(`${API}/issues?labels=ai-suggestions&state=open&per_page=1`);
+    const issues = await res.json();
+    if (!Array.isArray(issues) || !issues.length) {
+      el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🤖</div><p>No AI suggestions yet.</p><p style="font-size:12px; color:var(--text3); margin-top:6px;">The bi-weekly AI review runs every other Monday. Add <code>ANTHROPIC_API_KEY</code> to GitHub secrets to enable it.</p></div>`;
+      return;
+    }
+    const issue = issues[0];
+    const match = issue.body && issue.body.match(/<!--\s*ai-review-data\s*([\s\S]*?)-->/);
+    if (!match) {
+      el.innerHTML = `<div class="card"><p>AI suggestions issue found: <a href="${escHtml(issue.html_url)}" target="_blank">${escHtml(issue.title)}</a><br>No machine-readable data block — <a href="${escHtml(issue.html_url)}" target="_blank">view on GitHub</a>.</p></div>`;
+      return;
+    }
+    const data = JSON.parse(match[1].trim());
+    // Expose run metadata + the suggestion objects so the decision handlers can
+    // build a precise Cursor implementation prompt later.
+    window.__aiRunDate = data.runDate;
+    window.__aiIssueNumber = issue.number;
+    window.__aiSuggestions = {};
+    const decisions = (JSON.parse(localStorage.getItem('aiDecisions') || '{}'))[data.runDate] || {};
+    const suggestions = data.suggestions || [];
+    const CONF_COLOUR = { high: 'var(--green)', medium: 'var(--yellow)', low: 'var(--text3)' };
+    const STAB_BADGE = { stable: 'badge-safe', emerging: 'badge-minor', experimental: 'badge-info' };
+    const decidedCount = Object.keys(decisions).length;
+    const acceptedCount = Object.values(decisions).filter(d => d.decision === 'accepted').length;
+
+    let html = `<div class="update-status-bar">
+      <span>Review date: <strong>${escHtml(data.runDate)}</strong> · Type: <strong>${escHtml(data.reviewType || 'biweekly')}</strong> · <a href="${escHtml(issue.html_url)}" target="_blank">Issue #${issue.number} →</a></span>
+      <button class="refresh-btn" onclick="aiSuggestionsLoaded=false; loadAiSuggestions()">↻ Refresh</button>
+    </div>`;
+
+    html += `<div id="ai-decision-bar" class="update-status-bar" style="${decidedCount ? '' : 'display:none;'} background:var(--bg2); border:1px solid var(--border);">
+      <span><strong id="ai-decided-count">${decidedCount}</strong> decision<span id="ai-decided-plural">${decidedCount===1?'':'s'}</span> made · <strong id="ai-accepted-count">${acceptedCount}</strong> to implement</span>
+      <button class="btn btn-primary" id="ai-gen-btn" onclick="generateDecisionPrompt(this)">Generate Cursor prompt →</button>
+    </div>`;
+
+    if (!suggestions.length) {
+      html += `<div class="empty-state"><div class="empty-state-icon">✅</div><p>No actionable suggestions in the latest review (${data.runDate}).</p></div>`;
+    } else {
+      suggestions.forEach(s => {
+        window.__aiSuggestions[s.id] = s;
+        const decided = decisions[s.id] ? decisions[s.id].decision : '';
+        html += `<div class="update-card" id="ai-card-${s.id}" style="${decisionCardStyle(decided)}">
+          <div class="update-card-head">
+            <span class="update-card-name">${escHtml(s.title)}</span>
+            <span class="badge badge-info">${escHtml(s.area)}</span>
+            <span class="badge ${STAB_BADGE[s.stability] || 'badge-info'}">${escHtml(s.stability)}</span>
+            <span style="font-size:11px; font-weight:700; color:${CONF_COLOUR[s.confidence] || 'var(--text3)'}">● ${escHtml(s.confidence)} confidence</span>
+          </div>
+          <div style="font-size:12px; color:var(--text2); margin-bottom:10px; line-height:1.6;">${escHtml(s.reason)}</div>
+          <div class="update-card-actions" id="ai-actions-${s.id}">${decisionActionsHtml(s.id, decided)}</div>
+          <div class="detail-panel" id="ai-detail-${s.id}">
+            <div class="detail-panel-content">
+              <p><strong>Current:</strong> ${escHtml(s.current)}</p>
+              <p><strong>Proposed:</strong> ${escHtml(s.proposed)}</p>
+              ${s.source ? `<p><strong>Source:</strong> ${escHtml(s.source)}</p>` : ''}
+              ${s.npmPackage ? `<p><strong>npm package:</strong> <code>${escHtml(s.npmPackage)}</code></p>` : ''}
+              <p><strong>Effort:</strong> ${escHtml(s.effort)}</p>
+            </div>
+          </div>
+        </div>`;
+      });
+    }
+
+    if (data.watchlist && data.watchlist.length) {
+      html += `<div class="declined-section">
+        <span class="declined-toggle" onclick="this.nextElementSibling.classList.toggle('open'); this.textContent=this.textContent.includes('▶')?this.textContent.replace('▶','▼'):this.textContent.replace('▼','▶')">▶ Watchlist — ${data.watchlist.length} low-confidence signal${data.watchlist.length>1?'s':''}</span>
+        <div class="declined-list">
+          ${data.watchlist.map(s=>`<div class="declined-item"><span class="declined-item-label">${escHtml(s.title)} <span style="color:var(--text3);font-size:11px;">${escHtml(s.area)}</span></span></div>`).join('')}
+        </div>
+      </div>`;
+    }
+
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = `<div class="card"><p style="color:var(--red)">Could not load AI suggestions: ${escHtml(e.message)}. <a href="https://github.com/${REPO}/issues?labels=ai-suggestions" target="_blank">Check GitHub Issues directly.</a></p></div>`;
+  }
+}
+
+function toggleAiDetail(id) {
+  const panel = document.getElementById('ai-detail-' + id);
+  const btn = document.getElementById('ai-det-btn-' + id);
+  if (!panel) return;
+  panel.classList.toggle('open');
+  if (btn) btn.textContent = panel.classList.contains('open') ? 'Details ▲' : 'Details ▼';
+}
+
+// ─── AI suggestion decisions (accept / decline) ───────────────────────────────
+// Decisions are stored locally per review date for instant UI feedback, then
+// turned into a single Cursor prompt that implements the accepted ones and
+// records every decision in .github/ai-review-decisions.json — the durable
+// ledger that the next AI review reads so it never re-proposes a settled item.
+
+function decisionCardStyle(decided) {
+  if (decided === 'accepted') return 'border-left:3px solid var(--green);';
+  if (decided === 'declined') return 'opacity:0.6; border-left:3px solid var(--text3);';
+  return '';
+}
+
+function decisionActionsHtml(id, decided) {
+  const details = `<button class="btn btn-info" id="ai-det-btn-${id}" onclick="toggleAiDetail('${id}')">Details ▼</button>`;
+  if (decided === 'accepted') {
+    return `${details}<span style="font-size:11px; font-weight:700; color:var(--green); margin:0 4px;">✓ Accepted</span><button class="btn btn-ghost" onclick="undoAiDecision('${id}')">Undo</button>`;
+  }
+  if (decided === 'declined') {
+    return `${details}<span style="font-size:11px; font-weight:700; color:var(--text3); margin:0 4px;">✕ Declined</span><button class="btn btn-ghost" onclick="undoAiDecision('${id}')">Undo</button>`;
+  }
+  return `${details}
+    <button class="btn btn-primary" onclick="decideAi('${id}','accepted')">Accept</button>
+    <button class="btn btn-decline" onclick="decideAi('${id}','declined')">Decline</button>`;
+}
+
+function decideAi(id, decision) {
+  const runDate = window.__aiRunDate;
+  const all = JSON.parse(localStorage.getItem('aiDecisions') || '{}');
+  all[runDate] = all[runDate] || {};
+  const s = (window.__aiSuggestions || {})[id] || {};
+  all[runDate][id] = {
+    decision,
+    title: s.title, area: s.area, current: s.current, proposed: s.proposed,
+    source: s.source || '', npmPackage: s.npmPackage || null, effort: s.effort,
+    confidence: s.confidence, stability: s.stability,
+    decidedAt: new Date().toISOString().slice(0, 10),
+  };
+  localStorage.setItem('aiDecisions', JSON.stringify(all));
+  const card = document.getElementById('ai-card-' + id);
+  if (card) card.style.cssText = decisionCardStyle(decision);
+  const actions = document.getElementById('ai-actions-' + id);
+  if (actions) actions.innerHTML = decisionActionsHtml(id, decision);
+  updateDecisionBar();
+}
+
+function undoAiDecision(id) {
+  const runDate = window.__aiRunDate;
+  const all = JSON.parse(localStorage.getItem('aiDecisions') || '{}');
+  if (all[runDate]) { delete all[runDate][id]; localStorage.setItem('aiDecisions', JSON.stringify(all)); }
+  const card = document.getElementById('ai-card-' + id);
+  if (card) card.style.cssText = decisionCardStyle('');
+  const actions = document.getElementById('ai-actions-' + id);
+  if (actions) actions.innerHTML = decisionActionsHtml(id, '');
+  updateDecisionBar();
+}
+
+function updateDecisionBar() {
+  const runDate = window.__aiRunDate;
+  const decisions = (JSON.parse(localStorage.getItem('aiDecisions') || '{}'))[runDate] || {};
+  const n = Object.keys(decisions).length;
+  const a = Object.values(decisions).filter(d => d.decision === 'accepted').length;
+  const bar = document.getElementById('ai-decision-bar');
+  if (!bar) return;
+  bar.style.display = n ? '' : 'none';
+  const dc = document.getElementById('ai-decided-count'); if (dc) dc.textContent = n;
+  const dp = document.getElementById('ai-decided-plural'); if (dp) dp.textContent = n === 1 ? '' : 's';
+  const ac = document.getElementById('ai-accepted-count'); if (ac) ac.textContent = a;
+}
+
+function generateDecisionPrompt(btn) {
+  const runDate = window.__aiRunDate;
+  const issueNo = window.__aiIssueNumber;
+  const decisions = (JSON.parse(localStorage.getItem('aiDecisions') || '{}'))[runDate] || {};
+  const entries = Object.entries(decisions);
+  if (!entries.length) return;
+  const accepted = entries.filter(([, d]) => d.decision === 'accepted');
+  const declined = entries.filter(([, d]) => d.decision === 'declined');
+
+  const fmtAccepted = accepted.map(([id, d]) =>
+    `- [${id}] ${d.title} — ${d.area}\n    Current: ${d.current}\n    Proposed: ${d.proposed}` +
+    (d.source ? `\n    Source: ${d.source}` : '') +
+    (d.npmPackage ? `\n    npm package: ${d.npmPackage}` : '') +
+    `\n    Effort: ${d.effort}`
+  ).join('\n');
+
+  const prompt =
+`Apply accepted improvements from the AI guardrail review dated ${runDate} (issue #${issueNo}) to the cursor-guardrails template.
+
+Work on a new branch and open ONE pull request. Follow .cursor/rules/00-core.mdc; run npm run typecheck, lint and test before finishing. Make the smallest change that satisfies each suggestion and extend existing patterns rather than inventing new ones.
+
+0) VERIFY each suggestion's specific technical details (package versions, action SHAs, npm package names, cron syntax, etc.) against the current state of the ecosystem before implementing — AI-generated suggestions may reference versions that are already superseded or no longer exist. Use the current correct value and note the substitution when recording the decision.
+
+1) IMPLEMENT each accepted suggestion below, editing the exact files named in its Proposed text:
+${accepted.length ? fmtAccepted : '  (none accepted this round)'}
+
+2) RECORD every decision in .github/ai-review-decisions.json (create it as a JSON array if missing). Append one object per decision:
+   { "id": "<id>", "title": "<title>", "area": "<area>", "decision": "accepted|declined", "date": "${runDate}", "reviewIssue": "#${issueNo}", "guardrailVersion": "<current value of .cursor/guardrail-version>" }
+
+   ACCEPTED ids: ${accepted.map(([id]) => id).join(', ') || '(none)'}
+   DECLINED ids: ${declined.map(([id]) => id).join(', ') || '(none)'}
+
+3) If anything was implemented, bump .cursor/guardrail-version by one patch level and update guardrailVersion in guardrail-layers.json to match (the system improved).
+
+4) Before opening the PR, review your own diff as a critical reviewer would: for each implemented suggestion, confirm it actually achieves the stated benefit, matches this repo's existing conventions rather than introducing a new pattern, and does not weaken any existing guardrail. Fix anything that fails this check before opening the PR.
+
+Open the PR titled "feat(guardrails): apply AI-review improvements ${runDate}", summarise what changed, and list the declined items so future reviews do not re-propose them.`;
+
+  navigator.clipboard.writeText(prompt).then(() => {
+    if (btn) {
+      const orig = btn.textContent;
+      btn.textContent = 'Copied! Paste into Cursor';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2500);
+    }
+  });
+}
+
+// ─── Research panel ───────────────────────────────────────────────────────────
+
+const WORKFLOW_FILENAME = 'bi-weekly-ai-review.yml';
+const RESEARCH_HISTORY_KEY = 'researchHistory';
+
+// PAT lives in sessionStorage (not localStorage): it clears when the tab
+// closes, narrowing the exposure window for this client-only app. Saving
+// requires an explicit action rather than persisting on every keystroke.
+function savePat() {
+  const input = document.getElementById('github-pat');
+  const value = (input?.value || '').trim();
+  if (value) sessionStorage.setItem('githubPat', value);
+  else sessionStorage.removeItem('githubPat');
+  updatePatStatus();
+}
+
+function clearPat() {
+  sessionStorage.removeItem('githubPat');
+  const input = document.getElementById('github-pat');
+  if (input) input.value = '';
+  updatePatStatus();
+}
+
+function updatePatStatus() {
+  const pat = sessionStorage.getItem('githubPat') || '';
+  const el = document.getElementById('pat-status');
+  if (!el) return;
+  if (pat.startsWith('ghp_') || pat.startsWith('github_pat_')) {
+    el.textContent = '✓ Set';
+    el.style.color = 'var(--green)';
+  } else if (pat.length > 0) {
+    el.textContent = '⚠ Unrecognised format';
+    el.style.color = 'var(--yellow)';
+  } else {
+    el.textContent = 'Not set';
+    el.style.color = 'var(--text3)';
+  }
+}
+
+function initResearch() {
+  const pat = sessionStorage.getItem('githubPat') || '';
+  const patInput = document.getElementById('github-pat');
+  if (patInput && pat) patInput.value = pat;
+  updatePatStatus();
+  renderResearchHistory();
+}
+
+function setResearchTopic(topic) {
+  const input = document.getElementById('research-topic');
+  if (input) { input.value = topic; input.focus(); }
+}
+
+function setResearchStatus(msg, type) {
+  const el = document.getElementById('research-status');
+  if (!el) return;
+  el.style.display = 'block';
+  const colours = { info: 'var(--accent)', success: 'var(--green)', error: 'var(--red)', running: 'var(--yellow)' };
+  el.style.color = colours[type] || 'var(--text2)';
+  el.innerHTML = msg;
+}
+
+async function runInvestigation() {
+  const topic = (document.getElementById('research-topic')?.value || '').trim();
+  if (!topic) { setResearchStatus('Enter a tool or topic to investigate.', 'error'); return; }
+
+  const pat = sessionStorage.getItem('githubPat') || '';
+  if (!pat) { setResearchStatus('Set your GitHub PAT first (workflow scope required).', 'error'); return; }
+
+  const btn = document.getElementById('research-run-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Starting…'; }
+
+  setResearchStatus(`<span style="animation:spin 1s linear infinite; display:inline-block;">⟳</span> Triggering investigation for <strong>${escHtml(topic)}</strong>…`, 'running');
+
+  try {
+    // Trigger the workflow via GitHub API.
+    const triggerRes = await fetch(
+      `https://api.github.com/repos/${REPO}/actions/workflows/${WORKFLOW_FILENAME}/dispatches`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${pat}`,
+          'Accept': 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ref: 'main',
+          inputs: {
+            review_type: 'focused',
+            focus_topic: topic,
+            dry_run: 'false',
+          },
+        }),
+      }
+    );
+
+    if (!triggerRes.ok) {
+      const err = await triggerRes.json().catch(() => ({}));
+      throw new Error(err.message || `GitHub API returned ${triggerRes.status}`);
+    }
+
+    // Save to history.
+    const history = JSON.parse(localStorage.getItem(RESEARCH_HISTORY_KEY) || '[]');
+    const entry = { topic, triggeredAt: new Date().toISOString(), status: 'running', runUrl: null };
+    history.unshift(entry);
+    localStorage.setItem(RESEARCH_HISTORY_KEY, JSON.stringify(history.slice(0, 20)));
+    renderResearchHistory();
+
+    setResearchStatus(
+      `✓ Investigation started for <strong>${escHtml(topic)}</strong>. ` +
+      `<a href="https://github.com/${REPO}/actions/workflows/${WORKFLOW_FILENAME}" target="_blank" style="color:var(--accent);">Monitor on GitHub →</a><br>` +
+      `<span style="font-size:11px; color:var(--text3); margin-top:6px; display:block;">Results open as a new GitHub issue labelled ai-investigation once the workflow completes (~2–3 minutes).</span>`,
+      'success'
+    );
+
+    // Poll for completion and update history.
+    pollForCompletion(topic, entry.triggeredAt);
+
+  } catch (e) {
+    setResearchStatus(`Error: ${escHtml(e.message)}.<br><span style="font-size:11px;">Check your PAT has the <code>workflow</code> scope.</span>`, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Run investigation'; }
+  }
+}
+
+async function pollForCompletion(topic, triggeredAt) {
+  const pat = sessionStorage.getItem('githubPat') || '';
+  const startTime = new Date(triggeredAt).getTime();
+  const maxWait = 10 * 60 * 1000; // 10 minutes
+  const interval = 15 * 1000; // poll every 15s
+
+  for (let elapsed = 0; elapsed < maxWait; elapsed += interval) {
+    await new Promise(r => setTimeout(r, interval));
+
+    try {
+      const runsRes = await fetch(
+        `https://api.github.com/repos/${REPO}/actions/workflows/${WORKFLOW_FILENAME}/runs?per_page=5&event=workflow_dispatch`,
+        { headers: { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json' } }
+      );
+      const runs = (await runsRes.json()).workflow_runs || [];
+      // Find a run that started after we triggered (within a 2-min window).
+      const run = runs.find(r => {
+        const created = new Date(r.created_at).getTime();
+        return created >= startTime - 5000 && created <= startTime + 120000;
+      });
+
+      if (!run) continue;
+
+      if (run.status === 'completed') {
+        const history = JSON.parse(localStorage.getItem(RESEARCH_HISTORY_KEY) || '[]');
+        const entry = history.find(h => h.topic === topic && h.triggeredAt === triggeredAt);
+        if (entry) {
+          entry.status = run.conclusion === 'success' ? 'done' : 'failed';
+          entry.runUrl = run.html_url;
+          localStorage.setItem(RESEARCH_HISTORY_KEY, JSON.stringify(history));
+        }
+        renderResearchHistory();
+
+        if (run.conclusion === 'success') {
+          // Focused investigations are created under the ai-investigation label
+          // (see bi-weekly-ai-review.yml), separate from the rolling ai-suggestions
+          // issue — so this links to GitHub Issues directly rather than the
+          // AI Suggestions tab, which only ever loads the ai-suggestions label.
+          setResearchStatus(
+            `✅ Investigation complete for <strong>${escHtml(topic)}</strong>. ` +
+            `<a href="https://github.com/${REPO}/issues?q=is:issue+is:open+label:ai-investigation" target="_blank" style="color:var(--accent);">View result on GitHub →</a>`,
+            'success'
+          );
+        } else {
+          setResearchStatus(`Investigation failed. <a href="${escHtml(run.html_url)}" target="_blank">View run logs →</a>`, 'error');
+        }
+        return;
+      }
+    } catch { /* ignore polling errors */ }
+  }
+}
+
+function renderResearchHistory() {
+  const el = document.getElementById('research-history');
+  if (!el) return;
+  const history = JSON.parse(localStorage.getItem(RESEARCH_HISTORY_KEY) || '[]');
+  if (!history.length) { el.innerHTML = '<em>No investigations run yet.</em>'; return; }
+
+  const STATUS_ICON = { running: '⟳', done: '✅', failed: '❌' };
+  const STATUS_COLOUR = { running: 'var(--yellow)', done: 'var(--green)', failed: 'var(--red)' };
+
+  el.innerHTML = history.map(h => {
+    const when = new Date(h.triggeredAt).toLocaleString();
+    const icon = STATUS_ICON[h.status] || '⟳';
+    const colour = STATUS_COLOUR[h.status] || 'var(--yellow)';
+    const link = h.runUrl ? ` — <a href="${escHtml(h.runUrl)}" target="_blank" style="color:var(--accent);">view run</a>` : '';
+    return `<div style="padding:8px 0; border-bottom:1px solid var(--border); display:flex; gap:10px; align-items:baseline;">
+      <span style="color:${colour}; font-size:14px;">${icon}</span>
+      <div>
+        <strong style="color:var(--text);">${escHtml(h.topic)}</strong>
+        <span style="color:var(--text3); font-size:11px; margin-left:8px;">${when}${link}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─── Projects registry ────────────────────────────────────────────────────────
+function getProjects() { return JSON.parse(localStorage.getItem('guardrailProjects') || '[]'); }
+function saveProjects(p) { localStorage.setItem('guardrailProjects', JSON.stringify(p)); }
+
+function renderProjects() {
+  const projects = getProjects();
+  const wrap = document.getElementById('projects-table-wrap');
+  if (!projects.length) {
+    wrap.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📋</div><p>No projects yet. Click <strong>+ Add project</strong> to register your first project.</p></div>`;
+    return;
+  }
+  wrap.innerHTML = `<table>
+    <thead><tr><th>Project</th><th>Version</th><th>Layers</th><th>Last upgraded</th><th>Status</th><th>Notes</th><th></th></tr></thead>
+    <tbody>${projects.map((p, i) => {
+      const status = !p.version ? 'none' : p.version === TEMPLATE_VERSION ? 'current' : 'behind';
+      const statusLabel = status === 'current' ? 'Current' : status === 'behind' ? 'Update available' : 'Not adopted';
+      return `<tr class="project-row">
+        <td>${escHtml(p.name)}</td>
+        <td>${escHtml(p.version) || '—'}</td>
+        <td>${escHtml(p.layers) || '—'}</td>
+        <td>${escHtml(p.date) || '—'}</td>
+        <td><span class="status-dot status-${status}"></span>${statusLabel}</td>
+        <td style="color:var(--text3)">${escHtml(p.notes)}</td>
+        <td><button class="btn btn-ghost" style="padding:4px 10px; font-size:11px;" onclick="removeProject(${i})">Remove</button></td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+}
+
+function toggleAddForm() {
+  const f = document.getElementById('add-project-form');
+  f.classList.toggle('open');
+}
+
+function addProject() {
+  const name = document.getElementById('proj-name').value.trim();
+  if (!name) return;
+  const projects = getProjects();
+  projects.push({ name, version: document.getElementById('proj-version').value.trim(), layers: document.getElementById('proj-layers').value.trim(), date: document.getElementById('proj-date').value, notes: document.getElementById('proj-notes').value.trim() });
+  saveProjects(projects);
+  document.getElementById('add-project-form').classList.remove('open');
+  ['proj-name','proj-version','proj-layers','proj-date','proj-notes'].forEach(id => document.getElementById(id).value = '');
+  renderProjects();
+}
+
+function removeProject(i) {
+  const projects = getProjects();
+  projects.splice(i, 1);
+  saveProjects(projects);
+  renderProjects();
+}
+
+function exportProjects() {
+  const blob = new Blob([JSON.stringify(getProjects(), null, 2)], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'guardrail-projects.json'; a.click();
+}
+
+function importProjects() {
+  const input = document.createElement('input'); input.type = 'file'; input.accept = '.json';
+  input.onchange = e => { const reader = new FileReader(); reader.onload = ev => { try { saveProjects(JSON.parse(ev.target.result)); renderProjects(); } catch(e) { alert('Invalid JSON file'); } }; reader.readAsText(e.target.files[0]); };
+  input.click();
+}
+
+// ─── Health check ─────────────────────────────────────────────────────────────
+function toggleHealth(el) {
+  el.classList.toggle('checked');
+  updateHealthScore();
+  const state = {};
+  document.querySelectorAll('#health-list .health-item').forEach(item => {
+    state[item.dataset.id] = item.querySelector('.health-check').classList.contains('checked');
+  });
+  localStorage.setItem('healthState', JSON.stringify(state));
+}
+
+function updateHealthScore() {
+  const checks = document.querySelectorAll('#health-list .health-check');
+  const done = [...checks].filter(c => c.classList.contains('checked')).length;
+  const total = checks.length;
+  const score = document.getElementById('health-score');
+  score.textContent = `${done} / ${total}`;
+  score.style.background = done === total ? 'rgba(34,197,94,0.15)' : done > total/2 ? 'rgba(245,158,11,0.15)' : 'rgba(239,68,68,0.1)';
+  score.style.color = done === total ? 'var(--green)' : done > total/2 ? 'var(--yellow)' : 'var(--red)';
+}
+
+function resetHealth() {
+  document.querySelectorAll('#health-list .health-check').forEach(c => c.classList.remove('checked'));
+  localStorage.removeItem('healthState');
+  updateHealthScore();
+}
+
+function restoreHealth() {
+  const state = JSON.parse(localStorage.getItem('healthState') || '{}');
+  document.querySelectorAll('#health-list .health-item').forEach(item => {
+    if (state[item.dataset.id]) item.querySelector('.health-check').classList.add('checked');
+  });
+  updateHealthScore();
+}
+
+// ─── Prompt library ───────────────────────────────────────────────────────────
+const PROMPTS = [
+  { category: 'Adoption', name: 'Bootstrap existing project', desc: 'Day-zero prompt to adopt guardrails on any project — same flow as the "Adopt on existing project" tab. Reference clone path is pre-filled.', command: `Upgrade this project from the cursor-guardrails template.\n\nTemplate path:\nTEMPLATE_PATH_PLACEHOLDER\n\nFollow /guardrail-upgrade Layers 0–7: bootstrap (refreshes the reference clone with git pull --ff-only first), baseline, snapshot, project profile (uses a Throughline guardrail-prescription.json if found, otherwise asks type/risk/existing-toolchain — recommends a tailored layer set), gap analysis, upgrade, code audit, governance.` },
+  { category: 'Adoption', name: 'Check guardrail version drift', desc: 'Ask the agent to compare this project\'s guardrail version against the template.', command: `Check whether this project's guardrail version (in .cursor/guardrail-version) is current.\n\nTemplate path: TEMPLATE_PATH_PLACEHOLDER\n\nCompare .cursor/guardrail-version here vs TEMPLATE_PATH_PLACEHOLDER/.cursor/guardrail-version and report which layers may be outdated.` },
+  { category: 'Review', name: 'POPIA compliance audit', desc: 'Ask the agent to audit a file or directory for personal data handling issues.', command: `Audit the following file(s) for POPIA compliance:\n\n[LIST FILES OR DIRECTORIES]\n\nCheck against .cursor/rules/10-security-popia.mdc:\n- No personal data in logs\n- Input validated at trust boundaries\n- No secrets in source\n- Parameterised queries only\n\nReport findings as: Blocker / Should-fix / Nit` },
+  { category: 'Review', name: 'PR description review', desc: 'Ask the agent to review a draft PR description before posting.', command: `Review this pull request description before I post it:\n\n[PASTE PR TITLE AND BODY]\n\nCheck:\n1. Does the title follow Conventional Commits format?\n2. Does the body clearly explain what changed and why?\n3. Are security and data checkboxes appropriate?\n4. Are follow-ups noted?` },
+  { category: 'Setup', name: 'Generate 90-project-context.mdc', desc: 'Ask the agent to draft the project context file from a description.', command: `Generate a filled-in .cursor/rules/90-project-context.mdc for the following project:\n\n[DESCRIBE THE PROJECT: what it does, tech stack, key files, domain terms, data classification]\n\nUse the template from TEMPLATE_PATH_PLACEHOLDER/.cursor/rules/90-project-context.mdc as the structure. Replace every <PLACEHOLDER> with real content.` },
+  { category: 'Deps', name: 'Safe ESLint major bump check', desc: 'Ask the agent to verify ESLint plugin compatibility before accepting a major version upgrade.', command: `Before I upgrade ESLint to a new major version, check compatibility:\n\nCurrent eslint version: [CURRENT]\nProposed version: [NEW]\n\nCheck each plugin in package.json devDependencies:\n- eslint-plugin-jsx-a11y\n- eslint-plugin-security\n- typescript-eslint\n- @eslint/js\n\nFor each: does it declare peer compatibility with the new major version? Report COMPATIBLE / INCOMPATIBLE / UNKNOWN.` },
+  { category: 'Ops', name: 'Post-merge governance checklist', desc: 'Ask the agent to confirm all governance steps are in place after a merge.', command: `Run the post-merge governance checklist for this project:\n\n1. Is branch protection active on main with all 3 required CI checks?\n2. Is .cursor/guardrail-version present and matching the current template (TEMPLATE_VER_PLACEHOLDER)?\n3. Are there any open Dependabot PRs? If so, are they passing CI?\n4. Is .env gitignored and not tracked?\n5. Did the last CI run on main pass all 3 jobs?\n\nReport each item as PASS / FAIL / UNKNOWN and suggest fixes for any FAIL.` },
+];
+
+function renderAllPrompts() {
+  const list = document.getElementById('prompt-list');
+  if (!list) return;
+  list.innerHTML = PROMPTS.map((p, i) => `
+    <div class="prompt-card">
+      <div class="prompt-category">${p.category}</div>
+      <div class="prompt-name">${p.name}</div>
+      <div class="prompt-desc">${p.desc}</div>
+      <div class="prompt-actions">
+        <button class="btn btn-primary" onclick="copyText(\`${p.command.replace(/`/g,'\\`')}\`, this)">Copy prompt</button>
+        <button class="btn btn-ghost" onclick="togglePromptPreview(${i}, this)">Preview</button>
+      </div>
+      <div class="prompt-preview" id="prompt-preview-${i}"><pre>${fillPath(p.command)}</pre></div>
+    </div>`).join('');
+}
+
+function togglePromptPreview(i, btn) {
+  const el = document.getElementById('prompt-preview-' + i);
+  el.classList.toggle('open');
+  btn.textContent = el.classList.contains('open') ? 'Hide' : 'Preview';
+}
+
+// ─── Knowledge base ───────────────────────────────────────────────────────────
+const KB = [
+  { tag: 'ESLint', tagColor: 'var(--purple)', title: 'Why is .cursor/** in ESLint ignores?', body: '<p>The Cursor hook scripts (<code>guard-shell.mjs</code>, <code>guard-read.mjs</code>, <code>audit.mjs</code>) are Node.js ESM files. Without the ignore, ESLint linted them as if they were React source — returning a wall of irrelevant errors about missing JSX context, React hooks rules, and TypeScript project service.</p><p>The <code>.cursor/**</code> ignore was added to <code>eslint.config.js</code> so the hooks are skipped entirely. They are still linted-free because they run in Node, not the browser — ESLint\'s React/TS rules simply do not apply.</p><p><em>Source: Throughline adoption, 2026.</em></p>' },
+  { tag: 'commitlint', tagColor: 'var(--cyan)', title: 'Why commitlint.config.mjs not .js?', body: '<p>The project has <code>"type": "module"</code> in <code>package.json</code>, which tells Node.js to treat all <code>.js</code> files as ESM. When commitlint (which uses CJS internally) tried to load a <code>.js</code> config file it emitted a <code>MODULE_TYPELESS_PACKAGE_JSON</code> warning.</p><p>The <code>.mjs</code> extension explicitly marks the file as ESM regardless of <code>package.json</code> type, eliminating the warning across all Node versions.</p>' },
+  { tag: 'Dependabot', tagColor: 'var(--orange)', title: 'Why are ESLint major bumps blocked in Dependabot?', body: '<p><code>eslint-plugin-jsx-a11y</code> declares a peer dependency cap of <code>eslint@^9</code>. When Dependabot auto-proposed ESLint 10, the install succeeded locally (npm was lenient) but failed on CI (stricter npm version) with <code>ERESOLVE</code>.</p><p>Dependabot now ignores <code>eslint</code>, <code>@eslint/js</code>, and <code>typescript-eslint</code> major bumps. These must be done manually after verifying every plugin is compatible.</p><p><em>Source: CI failure on PR #3, fixed with .npmrc legacy-peer-deps=true plus version pins.</em></p>' },
+  { tag: 'Baseline', tagColor: 'var(--blue)', title: 'Why capture a pre-upgrade baseline?', body: '<p>When guardrails are adopted on an existing project, the new ESLint and TypeScript strict rules often flag pre-existing issues in the codebase. Without a baseline, it is impossible to tell which errors the guardrails introduced and which were already there.</p><p>Layer 0.5 of <code>/guardrail-upgrade</code> captures the output of typecheck, lint, and build <em>before</em> any files are changed. This lets the developer say "that error was already there" rather than spending time debugging something they did not cause.</p>' },
+  { tag: 'Governance', tagColor: 'var(--green)', title: 'Why is branch protection a separate Layer 7?', body: '<p>During the first real-world adoption, the team applied Layers 1–5 but did not immediately enable branch protection. One direct push to <code>main</code> got through before the rules were enforced — bypassing all the CI checks that had just been set up.</p><p>Layer 7 is now an explicit human checklist that must be confirmed before the upgrade is declared complete. The guardrails are not actually enforced until branch protection is active.</p>' },
+  { tag: 'Security', tagColor: 'var(--red)', title: 'Why gitleaks in CI and not just pre-commit?', body: '<p>Pre-commit hooks only run on the machine where the commit is made. If gitleaks is not installed locally (it is optional), or if someone bypasses the hook with <code>--no-verify</code>, secrets can reach the remote branch.</p><p>The CI pipeline runs gitleaks on every push and pull request using its public Docker container — no license key required. This means secrets are caught even if local scanning never ran. The principle: pre-commit is fast feedback; CI is the guarantee.</p>' },
+  { tag: 'Hooks', tagColor: 'var(--yellow)', title: 'Why Node.js for Cursor hooks, not shell scripts?', body: '<p>Cursor agents run on Windows, macOS, Linux, and Cursor cloud agents. Shell scripts (<code>.sh</code>) do not run on Windows without WSL. PowerShell scripts do not run on Mac/Linux without extra install.</p><p>Node.js is already installed (it is required for the toolchain) and runs identically on all platforms. The hook scripts use only Node built-ins — no additional packages required.</p>' },
+  { tag: '.npmrc', tagColor: 'var(--accent)', title: 'Why legacy-peer-deps=true in .npmrc?', body: '<p><code>typescript-eslint@8.x</code> declares <code>eslint@^10</code> as a peer, while <code>eslint-plugin-jsx-a11y</code> caps at <code>eslint@^9</code>. Both work correctly together, but newer npm versions surface this conflict as a hard install failure (<code>ERESOLVE</code>).</p><p>Setting <code>legacy-peer-deps=true</code> in <code>.npmrc</code> tells npm to resolve peer dependencies the pre-v7 way — treating conflicts as warnings, not errors. This allows the project to install cleanly on all npm versions while the plugin ecosystem catches up.</p>' },
+  { tag: 'Design', tagColor: 'var(--purple)', title: 'Why an 8-point grid and not arbitrary spacing?', body: '<p>An 8-point grid means all spacing values are multiples of 8px (or 4px for fine adjustments). This creates visual rhythm and makes designs consistent without requiring a designer to specify every margin individually.</p><p>When an AI agent applies the 8pt rule, every component it generates is automatically aligned with every other component — no visual debt accumulates. Rule <code>31-design.mdc</code> encodes this so the agent never introduces a 13px or 22px value that breaks the grid.</p><p>The rule also covers typography scale, colour contrast, and motion — the full set of constraints a senior designer would apply instinctively.</p>' },
+  { tag: 'UX', tagColor: 'var(--cyan)', title: 'Why encode behavioural science in rules, not just good intentions?', body: '<p>Dark patterns, cognitive overload, and poor error recovery are not usually the result of bad intentions — they are the result of deadline pressure causing shortcuts. An AI agent under instruction to "build fast" will make the same shortcuts a human developer would.</p><p>Rule <code>32-ux-behavioural.mdc</code> encodes Nielsen\'s heuristics, Fitts\'s Law, the Hooked model (ethical use only), and a hard list of dark patterns that must never be implemented. These are not suggestions — they are checked before any UI ships.</p><p>The goal: a single developer with an AI agent produces UX at the standard of a team with a dedicated UX researcher, without needing to remember every principle under pressure.</p>' },
+  { tag: 'Data', tagColor: 'var(--blue)', title: 'Why are analytics rules a hard stop, not a guideline?', body: '<p>Privacy violations in analytics are usually not deliberate — they happen when a developer includes a user email in an event property "just to debug" and forgets to remove it. Under POPIA, this is a breach regardless of intent.</p><p>Rule <code>33-data-science.mdc</code> makes PII in analytics events a hard stop. It also enforces statistical validity (no conclusions from small samples), chart formatting (no truncated y-axes), and Core Web Vitals as a CI gate.</p><p>The rule exists because data decisions are easy to get wrong quickly and hard to fix after the fact — especially once data is in a third-party analytics platform.</p>' },
+  { tag: 'AI Tools', tagColor: 'var(--orange)', title: 'Why a high bar for replacing Cursor — and why tool-agnostic rules?', body: '<p>Tool-switching has a real cost: learning curve, workflow rebuild, lost integrations, disruption. Switching too eagerly erodes the productivity gains from having a mature, well-configured stack.</p><p>Rule <code>50-ai-tooling.mdc</code> encodes the evaluation framework: new tools are evaluated as Additions (fills a gap, low friction) or Replacements (requires 10× improvement in ≥2 dimensions, justified switching cost). The bi-weekly AI review applies this framework quarterly.</p><p>Rules are written as "use the best available AI agent" rather than "use Cursor" so that if something significantly better emerges, the rules remain valid. Cursor is the current implementation — the framework is durable.</p>' },
+  { tag: 'Coverage', tagColor: 'var(--green)', title: 'Why 80%/80%/70% coverage thresholds, not 100%?', body: '<p>A brand-new codebase with a 100% coverage gate encourages writing tests that assert nothing meaningful just to hit the number — coverage becomes the goal instead of correctness.</p><p><code>vite.config.ts</code> sets conservative starting thresholds (lines 80%, functions 80%, branches 70%) via <code>@vitest/coverage-v8</code>, enforced in CI with <code>npm run test -- --coverage</code>. <code>00-core.mdc</code> is explicit that new code must maintain or improve these — thresholds only move up as the codebase matures, never down to accommodate a shortcut.</p><p><em>Source: AI guardrail review, 2026-06-29 (accepted suggestion ai-tooling-6clt5).</em></p>' },
+  { tag: 'Autonomy', tagColor: 'var(--yellow)', title: 'Why do background agents get stricter rules than interactive ones?', body: '<p>An interactive agent has a human watching every response in real time — a bad action gets caught within seconds. A background/autonomous agent can run for minutes or hours unsupervised, so a single wrong turn (a destructive delete, a direct push to <code>main</code>) can compound before anyone notices.</p><p><code>00-core.mdc</code>\'s "Autonomy boundaries" section splits actions into three tiers: always permitted (read, typecheck, lint, test, writes inside <code>src/</code> and rules/commands/docs), always requiring human approval (push to <code>main</code>, <code>npm publish</code>, destructive deletes, env changes), and background-agent-only requirements (write a plan to <code>.cursor/plans/</code> and halt for approval before any write outside <code>src/</code>).</p><p>The asymmetry is deliberate: the same actions are gated more tightly the less supervision is present.</p>' },
+  { tag: 'MCP', tagColor: 'var(--red)', title: 'Why an MCP server allowlist instead of trust-on-first-use?', body: '<p>An MCP server is executable code with tool-calling access to the agent\'s session — a malicious or compromised server is a direct supply-chain and prompt-injection vector, not just a dependency-version risk.</p><p><code>40-tooling-supply-chain.mdc</code> requires every server to be declared in <code>.cursor/mcp.json</code> with a pinned version or commit SHA (no floating <code>latest</code>), evaluated against the Addition criteria in <code>50-ai-tooling.mdc</code> before being added, and scoped read-only by default. MCP tool responses must be treated as untrusted external input — never interpolated directly into a shell command or SQL query — because a compromised server can return text designed to redirect agent behaviour.</p><p><em>Source: AI guardrail review, 2026-06-29 (accepted suggestion ai-tooling-zylrl).</em></p>' },
+  { tag: 'Axe-core', tagColor: 'var(--purple)', title: 'Why call axe-core directly instead of jest-axe or vitest-axe?', body: '<p>The obvious choice for automated accessibility testing in a Jest/Vitest project is a thin wrapper package. But <code>jest-axe</code> has had long-open requests just to publish a stable 1.0, and its Vitest forks are newer, smaller projects with their own maintenance uncertainty — exactly the kind of dependency <code>40-tooling-supply-chain.mdc</code> says to avoid when the existing toolchain already covers the gap.</p><p><code>src/test/axe.ts</code> calls <code>axe-core</code> (the actual engine every wrapper delegates to) directly via a small first-party <code>expectNoA11yViolations()</code> helper, disabling <code>color-contrast</code> because jsdom cannot compute real contrast — that is verified manually per the ratios in <code>31-design.mdc</code> instead.</p><p><em>Source: AI guardrail review, 2026-06-29 (accepted suggestion design-6cfyy).</em></p>' },
+];
+
+function renderKB() {
+  const list = document.getElementById('kb-list');
+  if (!list) return;
+  list.innerHTML = KB.map((k, i) => `
+    <div class="kb-card">
+      <div class="kb-header" onclick="toggleKB(${i})">
+        <div class="kb-title">
+          <span class="kb-tag badge" style="background:${k.tagColor}20; color:${k.tagColor}">${k.tag}</span>
+          ${k.title}
+        </div>
+        <span class="kb-chevron" id="kb-chev-${i}">▶</span>
+      </div>
+      <div class="kb-body" id="kb-body-${i}">${k.body}</div>
+    </div>`).join('');
+}
+
+function toggleKB(i) {
+  const body = document.getElementById('kb-body-' + i);
+  const chev = document.getElementById('kb-chev-' + i);
+  body.classList.toggle('open');
+  chev.textContent = body.classList.contains('open') ? '▼' : '▶';
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = getPath();
+  if (saved) document.getElementById('template-path-input').value = saved;
+  renderBootstrapPrompts();
+  renderAllPrompts();
+  renderKB();
+  renderProjects();
+  restoreHealth();
+  document.getElementById('template-ver').textContent = TEMPLATE_VERSION;
+});
+</script>
+</body>
+</html>

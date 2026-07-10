@@ -1,0 +1,52 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      # Batch routine dev-dependency bumps into a single PR to cut noise.
+      dev-dependencies:
+        dependency-type: development
+      # Keep react and react-dom in sync — they must always be the same version.
+      react-runtime:
+        patterns:
+          - "react"
+          - "react-dom"
+      # Foundational UI stack — bump as a unit so Tailwind, shadcn, and Radix stay compatible.
+      frontend-stack:
+        patterns:
+          - "tailwindcss"
+          - "@tailwindcss/vite"
+          - "tw-animate-css"
+          - "shadcn"
+          - "@base-ui/react"
+          - "lucide-react"
+          - "class-variance-authority"
+          - "clsx"
+          - "tailwind-merge"
+          - "prettier-plugin-tailwindcss"
+          - "@fontsource-variable/*"
+    ignore:
+      # ESLint major versions frequently break plugins (e.g. eslint-plugin-jsx-a11y
+      # caps at eslint@^9). Require an explicit compatibility check before merging.
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@eslint/js"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "typescript-eslint"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: "ci(deps)"

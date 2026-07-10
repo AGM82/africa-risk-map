@@ -1,0 +1,14 @@
+# Local secret scan. Skips with a note if gitleaks isn't installed — CI still
+# enforces it — so a missing tool never silently lets secrets through there.
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks protect --staged --redact --no-banner || {
+    echo "gitleaks detected potential secrets in staged changes. Commit aborted." >&2
+    echo "If this is a false positive, see CONTRIBUTING.md to baseline it." >&2
+    exit 1
+  }
+else
+  echo "note: gitleaks not installed; skipping local secret scan (CI enforces it)." >&2
+  echo "      install: https://github.com/gitleaks/gitleaks#installing" >&2
+fi
+
+npx lint-staged

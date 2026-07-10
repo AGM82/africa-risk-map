@@ -1,0 +1,48 @@
+---
+description: Project-specific context — fill this in for every project
+alwaysApply: true
+---
+
+# Project: cursor-guardrails
+
+## What this is
+
+A reusable Cursor project template — not a product app. It ships guardrails (rules, hooks, CI, slash commands) and a minimal React + TypeScript demo so `npm run dev`, `typecheck`, `lint`, and `test` all work out of the box. New projects start from this repo via GitHub **Use this template**; existing projects can adopt layers with `/guardrail-upgrade`.
+
+## Domain glossary
+
+- **Guardrail tier** — One layer of protection (workflow → advisory → toolchain → runtime → automation → workflows → review).
+- **Deterministic enforcement** — Checks a machine runs (lint, typecheck, CI) that cannot be skipped by an AI agent.
+- **Advisory rule** — Prose in `.cursor/rules/*.mdc` or `AGENTS.md`; helpful but not enforced alone.
+- **Template** — This repo; copy or fork to start another project. Customise per-project files (`90-project-context.mdc`, `LICENSE`, etc.) in each child project.
+
+## Tech stack
+
+Default scaffold: React + TypeScript + Vite + Tailwind CSS v4 + shadcn/ui + Lucide React + Vitest + ESLint + Prettier + Husky. See `30-react-stack.mdc` for the full three-tier stack (foundational / functional / swappable) and the override process.
+
+No backend, database, or deployment pipeline exists in this repo today — it is a frontend-only demo scaffold. `60-backend-api.mdc`, `61-database.mdc`, and `62-deployment-observability.mdc` are installed and glob-scoped so they activate automatically the moment a real project (this one or a child project started from it) adds a server, schema, or deploy step; until then they have no effect.
+
+## Canonical files (reference these — do not reinvent)
+
+- Component: `src/components/Greeting.tsx`
+- Utility: `src/lib/currency.ts`
+- Test: `src/components/Greeting.test.tsx`, `src/lib/currency.test.ts`
+- CI: `.github/workflows/ci.yml`
+- Agent entry: `AGENTS.md`
+
+## Architecture decisions
+
+- Single-page Vite app under `src/`; path alias `@/` → `src/`.
+- Agent governance: `.cursor/rules/` (advisory), `.cursor/hooks.json` (runtime), Husky + GitHub Actions (automation).
+- Branch protection on `main` requires three CI jobs before merge.
+
+## Data classification (POPIA)
+
+- Personal-information categories this app touches: None; templated demo data only (`formatZar` uses fake amounts).
+- Retention / access constraints: N/A for templated data. Real projects must fill this section in their own `90-project-context.mdc`.
+
+## Out of scope / do not touch
+
+- Do not treat `src/` demo code as production features — replace when starting a real app.
+- Do not commit `.env`, real client data, or credentials.
+- Do not weaken CI, hooks, or security scans without explicit instruction.

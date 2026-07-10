@@ -1,0 +1,69 @@
+---
+description: API and backend service design conventions — apply whenever creating or modifying a server, route handler, controller, or API contract
+globs: **/*.{ts,js}
+alwaysApply: false
+---
+
+# Backend and API design
+
+These rules apply once a project adds a server, API route, or service layer. They are
+deliberately framework-agnostic (Express, Fastify, Next.js route handlers, Hono, etc. all
+qualify) — pick one stack per project and record the choice in `90-project-context.mdc`,
+do not mix backend frameworks within a project.
+
+Input validation, secrets, and authorization are covered in `10-security-popia.mdc` —
+this file does not repeat them, only adds API-shape conventions on top.
+
+## Contract first
+
+- Define the request/response shape before writing the handler. Prefer a typed schema
+  (Zod, the OpenAPI/JSON Schema equivalent) as the single source of truth for both
+  validation and generated types — do not hand-maintain a TypeScript interface and a
+  validator separately, they will drift.
+- Version breaking changes in the URL or a header (`/v1/...` or `Accept-Version`), never
+  silently change a response shape that existing clients depend on.
+
+## Error responses
+
+- Every error response uses one consistent shape across the whole API, e.g.
+  `{ error: { code, message, details? } }`. Never return a bare string or a stack trace.
+- Map errors to correct HTTP status codes: `400` validation, `401` unauthenticated,
+  `403` unauthorized, `404` not found, `409` conflict, `422` semantically invalid,
+  `429` rate-limited, `5xx` server fault. Do not return `200` with an error payload.
+- Never leak internals in an error message returned to the client (stack traces, SQL,
+  file paths, library versions). Log the detail server-side; return a generic message
+  and a correlation/request ID the client can quote when reporting an issue.
+
+## Idempotency and safety
+
+- `GET`/`HEAD`/`OPTIONS` must never mutate state.
+- Mutating endpoints that may be retried by a client (payments, submissions) must accept
+  an idempotency key and return the original result on a repeated request with the same
+  key, rather than performing the action twice.
+- `PUT` is idempotent (full replace); `PATCH` is a partial update; `POST` creates or
+  performs a non-idempotent action. Do not use `POST` for an operation that is actually
+  a replace.
+
+## Pagination and payload size
+
+- Any endpoint that can return an unbounded list must paginate (cursor-based preferred
+  over offset for anything that can grow past a few thousand rows). Document the default
+  and maximum page size.
+- Reject request bodies above a sane size limit at the framework/proxy level, not after
+  full deserialization.
+
+## Rate limiting and abuse prevention
+
+- Public or authenticated-but-untrusted endpoints must have a rate limit. State the
+  limit (requests per window per key) in the route's documentation or a comment.
+- Rate-limit by an identity the caller cannot freely change (user ID, API key) wherever
+  one is available; fall back to IP only for fully anonymous endpoints.
+
+## Hard stops
+
+- Do not design an endpoint without first writing down its request/response contract.
+- Do not return inconsistent error shapes across different routes in the same API.
+- Do not implement a mutating endpoint that can be safely retried without an idempotency
+  story.
+- Do not skip authorization checks because "the UI doesn't expose this" — every
+  protected operation must be enforced server-side (see `10-security-popia.mdc`).

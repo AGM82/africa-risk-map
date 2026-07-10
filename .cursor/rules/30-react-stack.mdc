@@ -1,0 +1,85 @@
+---
+description: Frontend conventions for React, TypeScript, and the three-tier UI stack — apply whenever creating or modifying UI, components, styles, or data-fetching
+globs: **/*.{ts,tsx,css}
+alwaysApply: false
+---
+
+# Frontend stack
+
+**This file is the stack override point.** If a project deviates from any tier, edit here and note the deviation in `90-project-context.mdc`.
+
+## Tier 1 — Foundational (installed in every project from day one)
+
+These are always present. There is no project where styling, accessible primitives, and iconography are not needed.
+
+| Tool | Purpose | Version rule |
+|---|---|---|
+| React + TypeScript (strict) | Framework + type safety | Match `.nvmrc` engine; strict mode always on |
+| Tailwind CSS v4 | Utility-first styling; enforces the 8-point grid and constrained palette from `31-design.mdc` | `tailwindcss` + `@tailwindcss/vite` plugin |
+| shadcn/ui | Accessible, unstyled component primitives (Radix UI underneath) | Add per-component via `npx shadcn@latest add <name>` — never hand-roll inputs, dialogs, or selects that shadcn provides |
+| Lucide React | Icon set; consistent with shadcn/ui | `lucide-react` |
+| Vite | Build tool and dev server | `@tailwindcss/vite` plugin; no `tailwind.config.*` needed for v4 |
+| Vitest + Testing Library | Unit and component tests | Coverage via `@vitest/coverage-v8`; threshold in `vite.config.ts` |
+| axe-core | Automated accessibility assertions in component tests | Use the `expectNoA11yViolations()` helper in `src/test/axe.ts` — calls axe-core directly rather than a Jest/Vitest wrapper package |
+
+### Tailwind conventions
+
+- No arbitrary values (e.g. `w-[137px]`) unless the value is genuinely one-off and documented with a comment.
+- All colour, spacing, and typography must map to Tailwind's scale. Custom tokens go in the CSS layer via `@theme` — not inline.
+- Class order is enforced by `prettier-plugin-tailwindcss` at commit time.
+- The `@/` alias resolves to `src/` for all imports.
+
+### Component conventions
+
+- Functional components with typed props. No `any` — model real types. Co-locate types with the component or in a `types.ts`.
+- Compose from shadcn/ui primitives (`@/components/ui/*`). Extend them before building from scratch.
+- Reference component: `src/components/Greeting.tsx` — shows Tailwind + Lucide + shadcn `Button` in a minimal example.
+
+---
+
+## Tier 2 — Functional (standardised choice; install when the project first needs it)
+
+The tool to reach for is decided here. Install it when the project has an actual form, API call, or server-state requirement — not before, to keep the starter scaffold minimal.
+
+| Tool | Purpose | When to install |
+|---|---|---|
+| **Zod** | Runtime schema validation at every trust boundary (see `10-security-popia.mdc`) | First API response, URL param, or form payload that needs validation |
+| **React Hook Form** | Performant forms with minimal re-renders; pairs with Zod via `@hookform/resolvers` | First user-input form |
+| **TanStack Query** | Server-state management, caching, background refetch; replaces ad-hoc `fetch` in components | First async data dependency in a component |
+
+Do not use alternatives to these without updating this file and documenting the reason in `90-project-context.mdc`.
+
+---
+
+## Tier 3 — Swappable (name a default; override per project in `90-project-context.mdc`)
+
+These have legitimate project-specific variation. State the override and the reason in `90-project-context.mdc`.
+
+| Category | Default | Override examples |
+|---|---|---|
+| Routing | React Router v7 | TanStack Router (type-safe), Next.js App Router (SSR) |
+| Global state | Zustand | Jotai (fine-grained), Redux Toolkit (large teams) |
+| Animation | Framer Motion (`motion`) | CSS-only, `@react-spring/web` |
+| Auth | Clerk | Auth.js, Supabase Auth |
+| E2E testing | Playwright | Cypress |
+
+---
+
+## State and data rules
+
+- Local UI state: `useState` / `useReducer`.
+- Server state: TanStack Query (Tier 2) — not ad-hoc `fetch` calls inside components.
+- No `localStorage` / `sessionStorage` unless the project explicitly allows it in `90-project-context.mdc`.
+
+## Design discipline
+
+- Clarity, hierarchy, and restraint over decoration. Generous whitespace, a deliberate type scale, a constrained palette. No purple gradients, glassmorphism, or emoji-heavy UI by default.
+- Data-dense screens (schedules, claims, policy detail) prioritise scannable tables and information density over flourish.
+- Accessibility is enforced statically (`eslint-plugin-jsx-a11y`) and at test time (`expectNoA11yViolations()` per `31-design.mdc`): label every control, maintain contrast, support keyboard interaction. Target WCAG 2.2 AA.
+
+## Hard stops
+
+- Do not hand-roll a component that shadcn/ui already provides.
+- Do not use arbitrary Tailwind values without a documented reason.
+- Do not place `fetch` calls directly in a component once TanStack Query is installed.
+- Do not add a Tier 3 alternative without updating this file.

@@ -1,0 +1,22 @@
+---
+description: Security and POPIA baseline for input handling, secrets, PII, and data protection
+globs: **/*.{ts,tsx,js,jsx,sql,prisma}
+alwaysApply: false
+---
+
+# Security baseline (OWASP-aligned)
+
+Reference: OWASP Cheat Sheet Series (index it as `@OWASP`). Apply the cheat sheet relevant to the task — Authentication, Authorization, Input Validation, Cryptographic Storage, and so on.
+
+- Validate and sanitise all input at every trust boundary. Never trust client input, URL parameters, headers, or file contents.
+- Use parameterised queries or prepared statements only. Never build SQL by string concatenation.
+- Secrets come from environment variables, never from source. No API keys, passwords, or tokens in code, fixtures, or logs.
+- Output-encode user-controlled data to prevent XSS. Prefer framework escaping; never render unsanitised input as HTML.
+- Enforce authorization on every protected operation server-side. Hidden UI is never an access control.
+
+# POPIA and data protection (South Africa)
+
+- Treat all personal information as sensitive. Collect the minimum necessary and never log personal information.
+- Never place real client PII in this repository. All names, ID numbers, policy numbers, and figures must be fictional or templated.
+- The personal-information categories handled by THIS app are defined in `90-project-context.mdc` under Data classification. Honour the retention and access constraints stated there.
+- Any new field that could be personal information must be flagged in the plan before implementation.

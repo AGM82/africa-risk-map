@@ -1,0 +1,117 @@
+---
+description: UX and behavioural science principles — apply when designing flows, interactions, copy, or any user-facing decision point
+alwaysApply: false
+globs:
+  - "src/**/*.tsx"
+  - "src/**/*.ts"
+  - "**/*.html"
+---
+
+# UX and behavioural science principles
+
+These rules encode human psychology and usability research into product decisions. They apply whenever an AI agent designs or implements any user-facing interaction. Principles are cited from peer-reviewed research and established frameworks — they are not opinion.
+
+## Nielsen's 10 usability heuristics (apply before shipping any UI)
+
+1. **Visibility of system status** — always show what is happening within 100ms (immediate), 1s (feedback), 10s (progress indicator).
+2. **Match the real world** — use the user's vocabulary, not internal jargon. Mental models must align.
+3. **User control and freedom** — support undo and redo. Never trap users in a state they cannot exit.
+4. **Consistency and standards** — platform conventions exist for a reason. Follow them unless there is a tested reason not to.
+5. **Error prevention** — prevent problems before they occur. Confirm destructive actions; validate input before submission.
+6. **Recognition over recall** — make options visible. Do not require users to remember information from one part of the interface to another.
+7. **Flexibility and efficiency** — provide shortcuts for expert users without complicating the path for novices.
+8. **Aesthetic and minimalist design** — every element not needed is a distraction. Remove anything that does not serve the user's goal.
+9. **Error recovery** — error messages must be in plain language, explain the problem, and suggest a solution.
+10. **Help and documentation** — ideally, the interface is self-evident. When help is needed, it must be findable, focused, and actionable.
+
+## Cognitive load reduction
+
+- **Progressive disclosure**: show only what the user needs right now. Reveal complexity on demand, not upfront.
+- **Chunking** (Miller's Law): group related information. Humans process 5–9 items before cognitive overload. When a list exceeds 7, introduce grouping, search, or filtering.
+- **Recognition cues**: use familiar icons, patterns, and copy. Users should not need to read instructions to use the product.
+- **Reduce decision fatigue**: limit choices at each step. If a user faces more than 5 decisions simultaneously, redesign the flow.
+- Single-column forms outperform multi-column forms in completion rate. Prefer single-column for data entry.
+
+## Fitts's Law
+
+- Make frequent-use targets large and close to the user's likely cursor position.
+- Make destructive or irreversible actions small, distant from common targets, and protected by a confirmation step.
+- On mobile: minimum touch target size is 44×44px (Apple HIG) or 48×48dp (Material Design).
+
+## Feedback and response times
+
+| Response time | User experience | Required feedback |
+|---|---|---|
+| 0–100ms | Instantaneous | None needed |
+| 100ms–1s | Slight delay | Highlight/state change |
+| 1–10s | Noticeable wait | Loading indicator |
+| >10s | Long wait | Progress bar + estimated time |
+
+Never leave a user uncertain whether their action was received.
+
+## The ethical Hooked model (Nir Eyal, 2014)
+
+The Hooked model describes how products build habits. Use it to build **value habits** — habits that genuinely benefit the user — not **extraction habits** that benefit the product at the user's expense.
+
+1. **Trigger** — internal (emotion, need) or external (notification, prompt). Use triggers to connect the product to a genuine user need, not to manufacture artificial urgency.
+2. **Action** — the simplest behaviour in anticipation of reward. Remove every unnecessary step.
+3. **Variable reward** — intermittent, unpredictable positive outcomes increase engagement. Use to reward genuine user progress, not to create compulsion loops.
+4. **Investment** — users who invest (data, content, reputation) return. Design for investment that improves the product for the user, not just data collection for the company.
+
+**Rule**: Any feature that uses the Hooked model must pass the test: *Would I be comfortable if this user could see exactly what I am doing and why?*
+
+## Accessibility
+
+- **WCAG 2.1 AA is the minimum standard**. WCAG 2.2 AA is the target for new work.
+- All interactive elements must be keyboard navigable in logical tab order.
+- All images must have descriptive `alt` text. Decorative images must have `alt=""`.
+- Form inputs must have visible, associated `<label>` elements. Placeholder text does not replace labels.
+- Error messages must be associated with their input via `aria-describedby`.
+- Dynamic content changes must be announced via `aria-live` regions where appropriate.
+- Test every interactive component with a screen reader (NVDA on Windows, VoiceOver on Mac) before shipping.
+- Do not rely on colour alone to convey meaning. Always pair with text, icon, or pattern.
+
+## Ethical persuasion
+
+Persuasion is ethical when it helps users achieve their own goals. It becomes manipulation when it exploits cognitive biases against users' interests.
+
+**Permitted patterns:**
+- Social proof (show real usage statistics or reviews)
+- Scarcity (show true availability constraints)
+- Reciprocity (provide genuine value before asking for something)
+- Commitment and consistency (help users follow through on their own stated intentions)
+
+**Hard stops — dark patterns to never implement:**
+
+- **Confirm-shaming**: making the decline option guilt-inducing ("No thanks, I hate saving money")
+- **Roach motel**: making it easy to sign up, hard to cancel
+- **Hidden costs**: revealing charges late in a checkout flow
+- **Trick questions**: confusingly worded opt-in/opt-out checkboxes
+- **Misdirection**: drawing attention away from a disadvantageous option
+- **Disguised ads**: presenting paid content as editorial content
+- **Artificial urgency**: countdown timers that reset, fake "only 2 left" messaging
+- **Forced continuity**: charging after a free trial without clear prior notice
+
+If a proposed feature pattern appears on the [Dark Patterns Hall of Shame](https://www.deceptive.design/), do not implement it.
+
+## Copy and microcopy
+
+- Write for an 8th-grade reading level in product interfaces. The user is not being tested — they are trying to accomplish something.
+- Error messages: describe what went wrong, not what the system did ("Your password must be at least 8 characters" not "Invalid input").
+- CTA copy: describe the outcome, not the action ("Get your report" not "Submit").
+- Empty states are opportunities: tell the user why the space is empty and what to do next.
+- Confirmation dialogs: the confirm button text should describe the action ("Delete project" not "OK").
+
+## User research principles
+
+- Ship decisions based on observed behaviour, not stated preference. What people say they do and what they do differ.
+- A/B test one variable at a time. Multiple simultaneous changes make it impossible to attribute results.
+- Usability test with 5 users to find 80% of critical usability issues (Nielsen, 1993). More users find diminishing returns.
+- Define what "success" means before starting any test. Do not identify the metric after seeing results.
+
+## Hard stops
+
+- Do not ship any interactive flow that does not have a clear undo or back path.
+- Do not implement any dark pattern listed above, regardless of business rationale.
+- Do not ship any form without error state designs for every required field.
+- Do not ship on mobile without testing on an actual device at minimum screen size.

@@ -1,0 +1,97 @@
+---
+description: AI tool evaluation framework — apply when evaluating, recommending, or changing any AI tool in the development stack
+alwaysApply: true
+---
+
+# AI tooling principles
+
+This rule defines how AI tools are evaluated, adopted, and replaced. The goal is to work at the capability level of an expert team using the best available tools — without chasing novelty or fragmenting the stack.
+
+## Current stack
+
+| Category | Current tool | Status |
+|---|---|---|
+| Primary AI coding agent | Cursor | Active |
+| Code review | Cursor Bugbot (via PR) | Active |
+| Secret scanning | gitleaks | Active |
+| SAST | Semgrep (OWASP Top Ten) | Active |
+| Design | — | Open |
+| UX research | — | Open |
+| Data analysis | — | Open |
+| Documentation | — | Open |
+
+Update this table when a tool is added or replaced. The bi-weekly AI review monitors this stack quarterly.
+
+## The evaluation framework
+
+Every new tool falls into one of two categories with different evaluation bars.
+
+### Addition (fills a gap)
+
+A tool is an Addition candidate when it addresses a capability the current stack does not cover.
+
+**Evaluation criteria (all must pass):**
+1. **Genuine gap**: the capability does not exist in the current stack. Partial overlap with an existing tool requires clear differentiation.
+2. **Integration friction**: low. The tool integrates with the existing workflow without restructuring it.
+3. **Sustainability**: the project or company has been operating for ≥6 months, shows active maintenance (commits in last 90 days), and is financially credible.
+4. **Evidence from use**: evidence comes from real usage reports, not marketing material. At least one credible independent source.
+5. **Single tool per category**: adding a tool must not create a redundant category. Maximum one primary tool per function.
+
+**Process:** Flag as a candidate in the bi-weekly AI review → human evaluates → add to stack and document in this file.
+
+### Replacement (replaces Cursor or another active tool)
+
+A Replacement is warranted only when the new tool is substantially and durably better.
+
+**Evaluation criteria (all must pass):**
+1. **10× improvement in ≥2 dimensions**: quality of output, speed, cost, breadth of capability, integration depth. Marginal improvements do not justify switching.
+2. **Switching cost is clearly justified**: calculate the real cost — learning curve, workflow rebuild, lost integrations, migration time. The improvement must outweigh this over a 12-month horizon.
+3. **Evidence of durability**: the tool has been stable for ≥12 months and the provider has a credible business model. Pre-release or early-beta tools do not qualify for replacement consideration.
+4. **Independent evidence**: evidence comes from independent sources (engineering blogs, benchmark studies, peer usage reports), not vendor claims.
+5. **No productivity cliff**: there must be a migration path that does not create a weeks-long productivity gap.
+
+**Process:** Flag as a Replacement candidate → document the case with evidence → evaluate over one quarter before deciding → if justified, plan a migration sprint → update this file.
+
+### Rejection criteria (automatic disqualification)
+
+Reject any tool that:
+- Requires sending source code or proprietary data to an untrusted third party without clear data agreements
+- Has no clear data retention and deletion policy
+- Is owned by a company whose primary revenue model conflicts with developer interests
+- Requires abandoning existing toolchain investments without commensurate benefit
+- Has not been independently verified — vendor benchmark claims alone are not sufficient
+
+## Tool categories and what to watch
+
+### AI coding agents
+Current: Cursor. Watch for: improvements in multi-file reasoning, test generation quality, autonomous agent reliability, MCP ecosystem depth.
+
+### Design tools
+Watch for: AI design-to-code tools that produce accessible, production-quality output (not just wireframes). Evaluate when: output quality is comparable to a senior designer's work, not just faster wireframing.
+
+### UX research
+Watch for: tools that synthesise user research, run automated usability tests, or generate actionable heuristic evaluations from recordings. Evaluate when: they produce insights comparable to a trained UX researcher.
+
+### Data analysis
+Watch for: AI-augmented analytics tools that can answer natural-language questions against production data with appropriate access controls. Evaluate when: they reduce time-to-insight without compromising data privacy.
+
+### Documentation
+Watch for: tools that keep documentation in sync with code automatically, not just generate it once. Evaluate when: they reduce doc drift without creating a maintenance burden.
+
+## Rules for AI agents using this rule
+
+When asked to recommend, add, or change a tool:
+1. Check the current stack table first. Is this already covered?
+2. Classify as Addition or Replacement.
+3. Apply the appropriate evaluation criteria.
+4. If criteria are not met, say so clearly. Do not recommend a tool that fails the framework.
+5. If recommending an Addition: propose adding it to the stack table and document the gap it fills.
+6. If recommending a Replacement: document the case with specific evidence against the 10× / 2-dimension standard.
+7. Never recommend a tool from vendor marketing material alone.
+
+## Hard stops
+
+- Do not add a tool that creates a redundant category without removing the existing tool.
+- Do not recommend a Replacement based on a single benchmark or vendor claim.
+- Do not adopt any tool that requires sending unencrypted source code to an untrusted third party.
+- Do not let the stack grow beyond one primary tool per category without explicit justification.

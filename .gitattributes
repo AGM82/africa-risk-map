@@ -1,0 +1,21 @@
+# Normalize line endings: store as LF in the repo, check out native locally.
+* text=auto eol=lf
+
+# Shell scripts and Git hooks must stay LF even on Windows or they break.
+*.sh text eol=lf
+.husky/* text eol=lf
+
+# Windows-only scripts stay CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Treat binary assets as binary (no EOL conversion, no diff noise).
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary

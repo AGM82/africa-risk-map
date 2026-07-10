@@ -1,0 +1,22 @@
+# Dependencies and build output
+node_modules/
+dist/
+build/
+.next/
+coverage/
+
+# Environment and secrets
+.env
+.env.*
+*.pem
+*.key
+
+# Large or generated assets the agent does not need to read
+public/**/*.{png,jpg,jpeg,gif,webp}
+
+# Sample / data exports — keep real or bulk data out of the index (tune per project)
+/data/
+*.csv
+
+# Agent hook audit logs — local, not for the model to read back
+.cursor/hooks/logs/

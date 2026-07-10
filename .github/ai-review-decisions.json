@@ -1,0 +1,135 @@
+[
+  {
+    "id": "ai-tooling-fc1b6",
+    "title": "Define explicit autonomy boundaries for Cursor background agents",
+    "area": "AI Tooling",
+    "decision": "accepted",
+    "date": "2026-06-29",
+    "reviewIssue": "#24",
+    "guardrailVersion": "1.2.0"
+  },
+  {
+    "id": "ai-tooling-mt0sd",
+    "title": "Formalise audit hook log schema and add CI self-test",
+    "area": "Security",
+    "decision": "accepted",
+    "date": "2026-06-29",
+    "reviewIssue": "#24",
+    "guardrailVersion": "1.2.0"
+  },
+  {
+    "id": "ai-tooling-zylrl",
+    "title": "Add MCP server allowlist and prompt-injection guardrails",
+    "area": "AI Tooling",
+    "decision": "accepted",
+    "date": "2026-06-29",
+    "reviewIssue": "#24",
+    "guardrailVersion": "1.2.0"
+  },
+  {
+    "id": "ai-tooling-7znwd",
+    "title": "Enforce structured output schema in /review slash command",
+    "area": "AI Tooling",
+    "decision": "accepted",
+    "date": "2026-06-29",
+    "reviewIssue": "#24",
+    "guardrailVersion": "1.2.0"
+  },
+  {
+    "id": "ai-tooling-6clt5",
+    "title": "Enforce coverage thresholds in CI using @vitest/coverage-v8",
+    "area": "Engineering",
+    "decision": "accepted",
+    "date": "2026-06-29",
+    "reviewIssue": "#24",
+    "guardrailVersion": "1.2.0"
+  },
+  {
+    "id": "design-6cfyy",
+    "title": "Enforce WCAG 2.1 AA contrast and automated axe checks on components",
+    "area": "Design",
+    "decision": "accepted",
+    "date": "2026-06-30",
+    "reviewIssue": "#24",
+    "guardrailVersion": "1.3.0",
+    "note": "Implemented with axe-core called directly via a first-party src/test/axe.ts helper, not jest-axe — this project uses Vitest, and a thin wrapper of uncertain maintenance was avoided per 40-tooling-supply-chain.mdc (prefer extending the existing toolchain)."
+  },
+  {
+    "id": "design-fe0ia",
+    "title": "Add prefers-reduced-motion and animation best-practice rules to 31-design.mdc",
+    "area": "Design",
+    "decision": "accepted",
+    "date": "2026-06-30",
+    "reviewIssue": "#24",
+    "guardrailVersion": "1.3.0",
+    "note": "Already satisfied by the Tailwind v4 migration (PR #26) — the 'Motion and animation' section in 31-design.mdc already covers prefers-reduced-motion. No further change needed."
+  },
+  {
+    "id": "design-8wdx0",
+    "title": "Add CSS Cascade Layers architecture guidance to 31-design.mdc",
+    "area": "Design",
+    "decision": "accepted",
+    "date": "2026-06-30",
+    "reviewIssue": "#24",
+    "guardrailVersion": "1.3.0"
+  },
+  {
+    "id": "design-6auao",
+    "title": "Define and enforce a design token system via tailwind.config.ts",
+    "area": "Design",
+    "decision": "accepted",
+    "date": "2026-06-30",
+    "reviewIssue": "#24",
+    "guardrailVersion": "1.3.0",
+    "note": "Adapted: Tailwind v4 (already adopted in PR #26) is CSS-first and has no tailwind.config.ts. The rule instead requires tokens to be declared as CSS custom properties in src/index.css, which is where this project's token system already lives."
+  },
+  {
+    "id": "design-5q19e",
+    "title": "Add container query guidance and Tailwind plugin to 31-design.mdc",
+    "area": "Design",
+    "decision": "accepted",
+    "date": "2026-06-30",
+    "reviewIssue": "#24",
+    "guardrailVersion": "1.3.0",
+    "note": "Adapted: Tailwind v4 ships container queries in core, so @tailwindcss/container-queries was not installed — adding it would be a redundant dependency. The rule documents the native @container/@sm:/@md: syntax instead."
+  },
+  {
+    "id": "supply-chain-3iym6",
+    "title": "Generate SLSA provenance attestation for build artefacts",
+    "area": "Security",
+    "decision": "accepted",
+    "date": "2026-07-03",
+    "reviewIssue": "#34",
+    "guardrailVersion": "1.3.1",
+    "note": "Pinned to actions/attest-build-provenance@v4.1.0 (SHA a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32) instead of the proposed v2 — v2 is superseded and the repo's SHA-pinning convention always tracks the current stable release. The step only runs on push (github.event_name == 'push'), not on pull_request, since a provenance record is only meaningful for the artefact that actually ships and fork PRs cannot obtain the required OIDC token anyway."
+  },
+  {
+    "id": "supply-chain-7bec1",
+    "title": "Add CycloneDX SBOM generation to CI",
+    "area": "Security",
+    "decision": "accepted",
+    "date": "2026-07-03",
+    "reviewIssue": "#34",
+    "guardrailVersion": "1.3.1",
+    "note": "Pinned to @cyclonedx/cyclonedx-npm@5.0.0 instead of the proposed 1.19.3, which no longer exists on the npm registry (superseded by 2.0.0 through 5.0.0 since Jan 2025). Documented the sbom.json artifact location in 40-tooling-supply-chain.mdc."
+  },
+  {
+    "id": "supply-chain-t64o6",
+    "title": "Enforce npm provenance checks and exact pinning for production dependencies",
+    "area": "Security",
+    "decision": "accepted",
+    "date": "2026-07-03",
+    "reviewIssue": "#34",
+    "guardrailVersion": "1.3.1"
+  },
+  {
+    "id": "supply-chain-n7f2m",
+    "title": "Pin CI container images to digest (SHA256) not just version tag",
+    "area": "Security",
+    "decision": "accepted",
+    "date": "2026-07-03",
+    "reviewIssue": "#34",
+    "guardrailVersion": "1.3.1",
+    "note": "Resolved digests at PR time via the Docker Hub and GHCR registry APIs (semgrep:1.168.0 -> sha256:59fbed61..., gitleaks:v8.30.1 -> sha256:c00b6bd0...). Documented in 40-tooling-supply-chain.mdc that digests must be re-resolved by hand whenever either tag bumps, since Dependabot does not track container digests."
+  }
+]

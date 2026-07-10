@@ -1,0 +1,108 @@
+---
+description: Visual and graphic design principles — apply whenever creating or modifying UI, components, or any visual output
+alwaysApply: false
+globs:
+  - "src/**/*.tsx"
+  - "src/**/*.css"
+  - "src/**/*.scss"
+  - "**/*.html"
+---
+
+# Design principles
+
+These rules apply whenever an AI agent creates or modifies any visual output — components, styles, layouts, or HTML. They encode proven design principles, not personal preference.
+
+## Spacing and layout
+
+- Use an **8-point grid**. All spacing values (padding, margin, gap) must be multiples of 8px (or 4px for fine adjustments). Never use arbitrary values like 13px or 22px.
+- Prefer spacing tokens over raw px values. If a design token system exists, use it. If not, establish one before scaling.
+- **White space is not wasted space.** Dense UIs increase cognitive load. Give content room to breathe.
+- Group related elements visually. Items closer together are perceived as related (Gestalt proximity).
+
+## Visual hierarchy
+
+- Every view must have **one primary focal point**. The eye needs a clear entry point.
+- Use size, weight, contrast, and colour — in that order of preference — to signal importance.
+- Limit font weight variants to two per context: regular and bold. Adding semi-bold, light, and black in one view creates visual noise.
+- Headlines lead. Body follows. Labels are smallest. Do not invert this relationship.
+
+## Typography
+
+- Set a **modular type scale** (e.g. 12 / 14 / 16 / 20 / 24 / 32 / 48px). Never introduce a size that falls outside the scale.
+- Body text: `font-size: 16px`, `line-height: 1.5–1.7`, `max-width: 65–75ch` per line. Longer lines reduce reading speed.
+- `letter-spacing` on body text should be `0` or `-0.01em`. Only increase it on all-caps labels (0.05–0.1em).
+- Do not use more than two typeface families per project. Prefer system fonts for body text unless brand requires otherwise.
+- Italic is for emphasis or citation. Do not use it decoratively.
+
+## Colour
+
+- **Contrast must be accessible**: body text ≥ 4.5:1 (WCAG AA), large text ≥ 3:1, UI components ≥ 3:1. Check with a contrast tool before shipping.
+- Use **semantic colour roles**: `--color-surface`, `--color-on-surface`, `--color-primary`, `--color-error`, etc. Never hard-code hex values in components.
+- Colour is a redundant signal — never the only way to convey meaning (e.g. do not use red alone to indicate error; pair it with an icon and label).
+- Limit the palette. A primary, secondary, neutral scale, and semantic colours (success/warning/error/info) are sufficient for most products.
+- Test every colour scheme in both light and dark mode and against common colour-blindness simulations (deuteranopia, protanopia).
+
+### Automated accessibility checks
+
+- Every new component must include an automated accessibility assertion in its Vitest test, using the `expectNoA11yViolations()` helper in `src/test/axe.ts` (wraps `axe-core` directly — see `src/components/Greeting.test.tsx` for the pattern). This catches missing labels, invalid ARIA, and structural issues that manual review misses.
+- `color-contrast` is excluded from the automated check (jsdom cannot compute real contrast) — contrast is still a hard stop, verified manually or with a contrast tool per the rule above.
+
+## Design tokens
+
+- All colour, spacing, typography-scale, radius, and shadow values are declared as CSS custom properties in `src/index.css` (`:root`, `.dark`, and the `@theme inline` block) — **not** in a `tailwind.config.ts`. Tailwind v4 is CSS-first; there is no JS config file in this stack (see `30-react-stack.mdc`).
+- Agents must never invent a one-off arbitrary Tailwind value (e.g. `w-[137px]`) when an existing token covers the case. A genuinely one-off value is permitted only with a comment explaining why no token fits.
+- Adding a new token means adding the CSS variable in `src/index.css` first, then consuming it via Tailwind's generated utility (e.g. a new `--color-*` variable becomes a `bg-*`/`text-*` class automatically). Conceptual basis: [W3C Design Tokens Community Group](https://tr.designtokens.org).
+
+## CSS architecture
+
+- Tailwind v4 emits CSS cascade layers (`@layer theme, base, components, utilities`) automatically. Any hand-written CSS in `src/index.css` must sit inside the matching `@layer` block — element resets and CSS-variable definitions in `base`, one-off component overrides in `components`, never in the unlayered global scope.
+- Do not use `!important` to win a specificity fight. If a utility class is being overridden unexpectedly, fix the layer/order instead. The only exception is a documented, narrowly-scoped override inside the `components` layer with a comment explaining why.
+- Reference: [MDN `@layer`](https://developer.mozilla.org/en-US/docs/Web/CSS/@layer).
+
+## Component design
+
+- **Design systems over one-offs.** Reuse before creating. If a new component is needed, document its variants before building it.
+- Components must be **composable and context-agnostic**. A Button does not know whether it is in a form or a toolbar.
+- Prefer **compound components** (e.g. `<Card><Card.Header /><Card.Body /></Card>`) over monolithic components with many boolean props.
+- States must be designed before coded: default, hover, focus, active, disabled, error, loading. No state is optional.
+- Focus rings must be visible. `outline: none` without a replacement is a hard stop — it breaks keyboard accessibility.
+
+## Motion and animation
+
+- Animation must have **purpose**: orientation (explaining a transition), feedback (confirming an action), or attention (drawing focus to critical information).
+- Animation must never delay interaction. If an animation prevents a user from reaching their goal, remove it.
+- Default duration: **150–300ms** for micro-interactions, **200–400ms** for page transitions. Nothing longer unless explicitly justified.
+- Respect `prefers-reduced-motion`. Wrap all non-trivial animations:
+  ```css
+  @media (prefers-reduced-motion: reduce) { animation: none; transition: none; }
+  ```
+- Do not animate layout properties (`width`, `height`, `top`, `left`). Animate `transform` and `opacity` only — they do not trigger layout or paint.
+
+## Responsive design
+
+- **Mobile-first**: write base styles for the smallest viewport, then add complexity for larger ones.
+- Breakpoints are defined by **content needs**, not by device categories. A layout breaks when it looks broken — that is where to add a breakpoint.
+- No fixed-width layouts. Use `max-width` with `width: 100%` to contain content on wide viewports.
+- Images and media: `max-width: 100%` always. Use `aspect-ratio` to prevent layout shift during load.
+
+### Container queries
+
+- Reserve viewport breakpoints (`sm:`, `md:`, `lg:`) for page-level layout decisions. For any component that is reused across multiple layout slots (a card that appears full-width, in a grid cell, and in a sidebar), use container queries instead so the component adapts to the space it is actually given.
+- Tailwind v4 ships container queries in core — no plugin needed. Add `@container` to the component's direct wrapper, then use `@sm:`/`@md:`/`@lg:` (and `@max-*`) variants on its children.
+- The `@container` parent needs a measurable width (e.g. inside a `flex`/`grid` cell with an explicit size) or the query will not fire.
+
+## Consistency
+
+- **Consistency over creativity.** Use established patterns for established interactions (e.g. hamburger menu, breadcrumb, pagination). Invent only when no pattern exists and the user benefit is clear.
+- Match platform conventions where they exist (browser form controls, native date pickers on mobile).
+- Do not redesign standard affordances (links should look like links, buttons should look like buttons) without a clear, tested reason.
+
+## Hard stops
+
+- Do not ship a design without checking contrast ratios for all text and interactive elements.
+- Do not ship a component without visible focus state.
+- Do not introduce a spacing, colour, or type value outside the established scale.
+- Do not use `display: none` on content that should be accessible to screen readers; use `visually-hidden` patterns instead.
+- Do not ship a new component without an `expectNoA11yViolations()` test.
+- Do not add a `tailwind.config.ts` or declare tokens outside `src/index.css` — this stack is CSS-first (Tailwind v4).
+- Do not use `!important` outside a documented override inside the `components` layer.

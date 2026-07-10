@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeShellExecution": [{ "command": "node .cursor/hooks/guard-shell.mjs" }],
+    "beforeReadFile": [{ "command": "node .cursor/hooks/guard-read.mjs", "failClosed": true }],
+    "beforeMCPExecution": [{ "command": "node .cursor/hooks/audit.mjs" }],
+    "afterShellExecution": [{ "command": "node .cursor/hooks/audit.mjs" }],
+    "afterFileEdit": [{ "command": "node .cursor/hooks/audit.mjs" }],
+    "sessionStart": [{ "command": "node .cursor/hooks/audit.mjs" }]
+  }
+}

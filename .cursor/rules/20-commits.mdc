@@ -1,0 +1,20 @@
+---
+description: Commit message and versioning conventions (Conventional Commits and SemVer)
+alwaysApply: false
+---
+
+# Commits
+
+Follow Conventional Commits: `type(scope): subject`.
+
+- Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert.
+- Subject: imperative mood, lower case, no trailing period, 72 characters or fewer.
+- Breaking changes: add `!` after the type/scope and a `BREAKING CHANGE:` footer.
+
+Examples:
+- `feat(schedule): add ZAR premium breakdown to policy schedule export`
+- `fix(auth): reject expired session tokens on refresh`
+
+Versioning follows SemVer (MAJOR.MINOR.PATCH); breaking changes bump MAJOR.
+
+`commitlint` enforces this at commit time. Messages that fail are rejected.

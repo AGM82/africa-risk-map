@@ -1,0 +1,113 @@
+---
+description: Data science, measurement, and analytics principles — apply when implementing tracking, dashboards, data visualisation, or any measurement feature
+alwaysApply: false
+globs:
+  - "src/**/*.ts"
+  - "src/**/*.tsx"
+  - "**/*.sql"
+---
+
+# Data science and measurement principles
+
+These rules ensure measurement is purposeful, statistically valid, privacy-respecting, and actionable. They apply whenever an AI agent implements analytics, reporting, dashboards, or data-driven features.
+
+## Measure outcomes, not outputs
+
+- **Lagging indicators** measure results (revenue, retention, task completion rate). They confirm whether you succeeded.
+- **Leading indicators** predict lagging indicators (daily active users, activation rate, feature adoption). They tell you early whether you are on track.
+- Before implementing any metric: identify which lagging indicator it predicts and how. If you cannot draw that connection, the metric is vanity.
+- Common vanity metrics to avoid as primary measures: page views (without context), registered users (vs active), social follows.
+
+## Event tracking design
+
+- Name events using `noun_verb` convention: `button_clicked`, `form_submitted`, `session_started`, `payment_failed`.
+- Track **decisions and outcomes**, not raw interactions. `checkout_completed` is more valuable than `button_clicked`.
+- Every event must answer: Who did it? What was the context? What was the result?
+- Standard event properties: `user_id` (anonymised), `session_id`, `timestamp`, `platform`, `event_name`, `properties: {}`.
+- Never include personally identifiable information in event properties. User identifiers must be pseudonymous.
+- Document every event in a tracking plan before implementing. Undocumented events become technical debt.
+
+## Core Web Vitals (performance contract)
+
+These are the minimum performance targets before shipping any web UI. Measure with Lighthouse and real-user monitoring (RUM).
+
+| Metric | Good | Needs improvement | Poor |
+|--------|------|-------------------|------|
+| Largest Contentful Paint (LCP) | ≤2.5s | 2.5–4s | >4s |
+| Interaction to Next Paint (INP) | ≤200ms | 200–500ms | >500ms |
+| Cumulative Layout Shift (CLS) | ≤0.1 | 0.1–0.25 | >0.25 |
+
+- LCP: optimise the largest above-the-fold element. Prioritise image loading with `fetchpriority="high"`.
+- INP: avoid long tasks on the main thread. Defer non-critical JavaScript.
+- CLS: set explicit `width` and `height` on all images and media. Reserve space for async content.
+
+Measure Core Web Vitals in CI using Lighthouse CI. Do not ship if any metric moves from Good to Needs Improvement without a documented justification.
+
+## Statistical validity
+
+- **Minimum sample size**: calculate before starting any test. Use a power analysis (power ≥ 0.8, α ≤ 0.05). Tools: [statsig.com/sample-size-calculator](https://statsig.com/sample-size-calculator).
+- **Do not stop a test early** because results look promising. Early stopping inflates false-positive rates.
+- **One variable at a time**: A/B tests change one element. Multi-variate tests require exponentially larger samples to reach significance.
+- **Two-week minimum runtime**: catch day-of-week effects that would otherwise skew results.
+- **Practical significance ≠ statistical significance**: a 0.1% improvement may be statistically significant with a large enough sample but not worth shipping. Define minimum detectable effect before starting.
+- p < 0.05 means there is a 5% chance your result is a false positive. Report confidence intervals alongside p-values.
+
+## Data visualisation
+
+Choose the chart type based on the question, not preference:
+
+| Question | Chart type |
+|---|---|
+| How does X compare to Y? | Bar chart (horizontal for long labels) |
+| How does X change over time? | Line chart |
+| What is the composition of X? | Stacked bar or treemap (not pie for >3 segments) |
+| Is there a relationship between X and Y? | Scatter plot |
+| How is X distributed? | Histogram or box plot |
+
+**Formatting rules:**
+- Start y-axis at zero for bar charts. Never truncate to exaggerate differences.
+- Label axes with units. A number without a unit is ambiguous.
+- Remove chart junk: no 3D effects, no unnecessary gridlines, no decorative elements.
+- Use colour to encode a variable, not to decorate. A single-colour bar chart is clearer than a rainbow.
+- Provide a text summary of key insight alongside every chart — do not make users interpret alone.
+
+## Privacy-first analytics (POPIA / GDPR alignment)
+
+- **Collect minimum necessary data.** If you are not sure you will use a property, do not collect it.
+- Anonymise user identifiers at the point of collection. Never store raw emails or names in analytics events.
+- Implement a **data retention policy** before going to production. Default: delete raw event data after 90 days; keep aggregated metrics.
+- All analytics collection must be disclosed in the privacy policy. Do not add a new tracking tool without updating documentation.
+- Respect `Do Not Track` headers and cookie consent. Provide a genuine opt-out that works.
+- Do not send analytics data cross-border without understanding the legal basis (POPIA requires adequate protection).
+- PII categories to never include in events: full name, email, ID number, phone number, location (beyond country/region), health data, financial data.
+
+## Dashboard design principles
+
+- **One primary metric per view.** A dashboard with 50 metrics communicates nothing. The most important number should be visually dominant.
+- Always show **context alongside the number**: comparison to previous period, target, or benchmark. A metric without context cannot drive a decision.
+- Design for the decision, not the data. Before building a dashboard, ask: what decision will this dashboard enable?
+- Colour in dashboards is semantic: green = good, yellow = attention, red = action required. Use consistently.
+- Refresh intervals must be appropriate to the metric. Real-time updates for operational metrics; daily aggregates for strategic metrics.
+
+## A/B testing checklist
+
+Before starting any A/B test:
+- [ ] Define the hypothesis: "We believe that [change] will cause [outcome] because [reason]."
+- [ ] Calculate minimum sample size
+- [ ] Define primary metric and guardrail metrics (metrics that must not degrade)
+- [ ] Set test duration (minimum 2 weeks)
+- [ ] Confirm random assignment is working correctly
+- [ ] Define what "winner" means before seeing results
+
+After the test:
+- [ ] Report confidence intervals, not just p-value
+- [ ] Check guardrail metrics
+- [ ] Document the result regardless of outcome — negative results have value
+
+## Hard stops
+
+- Do not collect PII in analytics events.
+- Do not ship a dashboard without a text interpretation of the key insight.
+- Do not start a y-axis at a non-zero value in a bar chart.
+- Do not draw conclusions from fewer than the calculated minimum sample size.
+- Do not implement analytics tracking without a corresponding tracking plan entry.

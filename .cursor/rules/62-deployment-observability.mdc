@@ -1,0 +1,78 @@
+---
+description: Deployment, environment, and observability conventions — apply whenever creating or modifying CI/CD deploy steps, environment config, logging, or error tracking
+globs: **/*.{ts,js,yml,yaml,Dockerfile}
+alwaysApply: false
+---
+
+# Deployment and observability
+
+These rules apply once a project deploys somewhere beyond a local machine. They are
+deliberately platform-agnostic (a container host, a serverless platform, a PaaS all
+qualify) — record the actual target in `90-project-context.mdc`.
+
+## Environments
+
+- Maintain at least two separate environments — staging/preview and production — with
+  separate databases and separate secrets. Never point a staging environment at the
+  production database "just to test something."
+- Configuration that differs by environment (URLs, feature flags, log level) comes from
+  environment variables or a config service, never from a hardcoded branch in code
+  (`if (env === 'production')` scattered through business logic is a smell — isolate it
+  to a config module).
+- Secrets are injected at deploy time by the platform's secret store or CI secrets, never
+  committed, never baked into a container image layer (see `10-security-popia.mdc`).
+
+## Containerization (where applicable)
+
+- Use a multi-stage Dockerfile: build dependencies and compile in one stage, copy only
+  the production artifact and runtime dependencies into a slim final image.
+- Run the container process as a non-root user.
+- Pin the base image to a specific digest or minor version, not `latest`.
+
+## Health checks and readiness
+
+- Expose a lightweight liveness endpoint (process is up) separate from a readiness
+  endpoint (dependencies — database, cache — are reachable) if the platform supports
+  the distinction. A liveness check must not depend on the database; a crashed database
+  should not cause the orchestrator to kill and restart a healthy process in a loop.
+- A deploy is not "done" until the new version passes its readiness check — do not
+  route traffic to a version that hasn't confirmed it can serve requests.
+
+## Structured logging
+
+- Log in structured JSON (not freeform strings) in any environment beyond local dev, so
+  logs are queryable: `{ timestamp, level, message, requestId, ...context }`.
+- Never log personal information, secrets, full request/response bodies, or auth
+  tokens — this is a hard stop carried over from `10-security-popia.mdc`, restated here
+  because logging is exactly where it most often leaks by accident (e.g. logging an
+  entire request object for "debugging").
+- Include a correlation/request ID generated at the edge and threaded through every log
+  line for that request, so a single failure can be traced end-to-end.
+
+## Error tracking and alerting
+
+- Wire unhandled exceptions and unhandled promise rejections to an error-tracking
+  service (e.g. Sentry-class tooling) rather than relying on log-scraping to notice
+  production errors.
+- Alert on symptoms a user would notice (error rate, latency, availability), not only on
+  infrastructure metrics (CPU, memory) that may be fine while the application is broken.
+- Every alert must have a documented first response step — an alert with no runbook is
+  noise.
+
+## Rollback
+
+- Every deploy mechanism must support rolling back to the previous version without a
+  fresh build (redeploy the prior image/artifact). Know how to do this before you need
+  it, not while an incident is in progress.
+- Database migrations that ship alongside a deploy should be backward-compatible with
+  the previous application version for at least one deploy cycle, so a rollback doesn't
+  require a matching schema rollback.
+
+## Hard stops
+
+- Do not point any non-production environment at the production database.
+- Do not log personal information, secrets, or full request bodies under any
+  circumstance.
+- Do not ship a deploy pipeline with no rollback path.
+- Do not treat "the container is running" as equivalent to "the service is healthy" —
+  readiness must check real dependencies.

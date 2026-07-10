@@ -1,0 +1,14 @@
+# Code ownership for review gates. GitHub auto-requests review from these
+# owners when matching files change. Replace the placeholders with your real
+# GitHub team or usernames before relying on this.
+
+# Default owner for everything not matched below.
+* @AGM82
+
+# The fundamental guardrails deserve extra scrutiny — changes here affect every
+# project built from this template.
+/.cursor/ @AGM82
+/.github/ @AGM82
+/.husky/ @AGM82
+/eslint.config.js @AGM82
+/tsconfig.json @AGM82
