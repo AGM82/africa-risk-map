@@ -8,6 +8,14 @@ alwaysApply: false
 
 **This file is the stack override point.** If a project deviates from any tier, edit here and note the deviation in `90-project-context.mdc`.
 
+## Project overrides (Africa Risk Map)
+
+- **Build tool — Next.js App Router (React 19 / Next 15) replaces Vite.** The project needs a single full-stack codebase (UI + route handlers + server actions) for PostGIS spatial queries, server-side multi-tenant scoping, and the premium engine — a plain SPA build tool can't serve that. Full rationale and additions (Prisma/PostGIS, MapLibre/deck.gl, TanStack Table, Inngest, Sentry, Anthropic API) are recorded in `90-project-context.mdc`.
+- **Tier 3 Routing — Next.js App Router** (one of the file's own listed override examples, now the actual chosen value for this project, not just an example).
+- **Tier 3 Auth — Clerk** (default retained, confirmed as the chosen value, not overridden).
+- **E2E testing — Playwright**, added alongside Vitest rather than replacing it (default retained).
+- Global state (Zustand) and Animation (Framer Motion) defaults are unchanged/not yet needed — revisit when a concrete requirement appears.
+
 ## Tier 1 — Foundational (installed in every project from day one)
 
 These are always present. There is no project where styling, accessible primitives, and iconography are not needed.

@@ -3,46 +3,89 @@ description: Project-specific context — fill this in for every project
 alwaysApply: true
 ---
 
-# Project: cursor-guardrails
+# Project: Africa Risk Map
 
 ## What this is
 
-A reusable Cursor project template — not a product app. It ships guardrails (rules, hooks, CI, slash commands) and a minimal React + TypeScript demo so `npm run dev`, `typecheck`, `lint`, and `test` all work out of the box. New projects start from this repo via GitHub **Use this template**; existing projects can adopt layers with `/guardrail-upgrade`.
+A multi-tenant B2B platform for Human Risks / Lombard Insurance (the Insurer) and its brokers to manage Personal Accident (PA) risk across Africa for member-based client organisations — starting with GRAA (Game Rangers Association of Africa). It combines a sub-nationally-rated territory risk map, organisation/location/headcount tracking, an AI-assisted policy-structuring workflow, and a premium & aggregate calculator that reconciles exactly with each client's issued Policy Schedule.
+
+Not a generic demo — this replaces a set of Excel workbooks (risk rating table + monthly premium/agg ledger) with a governed, auditable system of record. Scaffolded from the [cursor-guardrails](https://github.com/AGM82/cursor-guardrails) template so the 7-tier guardrail system is present from the first commit.
+
+The full product/architecture plan lives at `.cursor/plans/africa-risk-map-platform-plan.md` — treat it as the detailed source of truth behind this summary; consult it for anything not covered here.
 
 ## Domain glossary
 
-- **Guardrail tier** — One layer of protection (workflow → advisory → toolchain → runtime → automation → workflows → review).
-- **Deterministic enforcement** — Checks a machine runs (lint, typecheck, CI) that cannot be skipped by an AI agent.
-- **Advisory rule** — Prose in `.cursor/rules/*.mdc` or `AGENTS.md`; helpful but not enforced alone.
-- **Template** — This repo; copy or fork to start another project. Customise per-project files (`90-project-context.mdc`, `LICENSE`, etc.) in each child project.
-
-## Tech stack
-
-Default scaffold: React + TypeScript + Vite + Tailwind CSS v4 + shadcn/ui + Lucide React + Vitest + ESLint + Prettier + Husky. See `30-react-stack.mdc` for the full three-tier stack (foundational / functional / swappable) and the override process.
-
-No backend, database, or deployment pipeline exists in this repo today — it is a frontend-only demo scaffold. `60-backend-api.mdc`, `61-database.mdc`, and `62-deployment-observability.mdc` are installed and glob-scoped so they activate automatically the moment a real project (this one or a child project started from it) adds a server, schema, or deploy step; until then they have no effect.
+- **Territory** — A country or rated sub-region (e.g. "Nigeria North-East" vs "Nigeria - Rest of", "DRC East" vs "DRC West"). Carries 6 risk sub-scores (Healthcare Infrastructure, Medical Personnel, Medical Transport, Emergency Response, Security/Conflict, Occupational Hazards), a computed Total Score, Risk Category (Low/Medium/High/Very High/Extreme), evacuation paths/cost, an Evacuation Feasibility flag, and versioned history. Shared, global — one source of truth across all clients.
+- **Client** — An insured association/organisation (e.g. GRAA). Owns its own Policy, MemberOrganisations, and RiskMixPolicy.
+- **BrokerOrganisation** / **ClientBrokerAssignment** — The brokerage servicing a Client, effective-dated so a broker change at renewal doesn't lose history.
+- **MemberOrganisation** — An organisation belonging to a Client (e.g. a specific reserve/park operator).
+- **OrganisationLocation** — A MemberOrganisation's presence in a Territory, with a headcount and an assigned CoverCategory.
+- **Policy** — One per Client per annual term (GRAA renews 1 December). Has `policyYear`, inception/expiry, status, and links to CoverCategory/PaymentTerms. Historical terms load as prior Policy records for audit.
+- **CoverCategory** — The Insured-Person Categories within a Policy (e.g. "Category 1 — Essential", "Category 2 — Premium"). Carries a policy-year-specific display label mapped onto an underlying PlanType (Essential/Premium), declared insured-person count, and Premium/Aggregate rate lines (amount + basis + VAT treatment).
+- **BenefitLine** — A benefit (DEATH/PTD/TTD/MEDICAL/EVACUATION) within a CoverCategory, with its sum insured/limit and basis.
+- **PaymentTerms** — How a Policy bills (e.g. `MONTHLY_BY_NUMBERS`, `ANNUAL_WITH_ADJUSTMENT`) and whether the Aggregate is a fund the client retains.
+- **TerritoryBenefitEligibility** — Maps a Territory's Benefit Options Available (1-2 / 3-4 / 4 only / Decline) to which CoverCategory values a location there may use — the underwriting-gate data.
+- **Endorsement** — A headcount add/remove against an OrganisationLocation; the ledger, replacing the Excel rows.
+- **RecalibrationBatch** — Tracks the one-time reconciliation of newly-entered organisations/locations against known ledger totals until balanced.
+- **RiskMixPolicy** — Per-client target % of covered lives across risk tiers (e.g. ~85% Low/Med, 10% High, 5% Very High), with a tolerance band protecting the client's rate guarantee.
+- **PolicyTemplate** — A reusable, not-yet-client-bound CoverCategory/BenefitLine/PaymentTerms shape, used to seed a new client.
+- **PolicyStructureSession** — The audit trail behind the AI-assisted "Structure Chat" policy-drafting feature.
+- **ExternalSignal** — An AI/feed-sourced candidate risk-relevant event (conflict, outbreak, disaster, advisory change) with mandatory source/quote/snapshot provenance; advisory only, Insurer-gated, never auto-repricing.
 
 ## Canonical files (reference these — do not reinvent)
 
-- Component: `src/components/Greeting.tsx`
+- Component: `src/components/Greeting.tsx` (demo scaffold — replace in Foundations phase)
 - Utility: `src/lib/currency.ts`
 - Test: `src/components/Greeting.test.tsx`, `src/lib/currency.test.ts`
 - CI: `.github/workflows/ci.yml`
 - Agent entry: `AGENTS.md`
+- Full plan: `.cursor/plans/africa-risk-map-platform-plan.md`
+
+## Tech stack
+
+Foundational tier (React/TypeScript/Tailwind/shadcn/Lucide/Vitest/axe-core) is unchanged from the template default — see `30-react-stack.mdc`.
+
+Deviations and additions from the template baseline (recorded here per the guardrails' own rule):
+
+- **Build/routing — Next.js App Router (React 19 / Next 15), not Vite.** A documented Tier-1/Tier-3 deviation: the app needs a single full-stack codebase (UI + route handlers + server actions) for PostGIS spatial queries, server-side multi-tenant scoping, scheduled feed/AI jobs, and the premium engine. Ships `output: 'standalone'` + a Dockerfile for host portability (Cloud Run primary target, Vercel fallback).
+- **Database — PostgreSQL + PostGIS (+ H3/pgrouting) via Prisma, hosted on Neon** (pooled connection string for runtime, direct/unpooled for migrations — the known Prisma+serverless connection-exhaustion pitfall). Geometry columns modelled as `Unsupported("geometry(...)")` with raw `$queryRaw`/`$executeRaw` for spatial predicates — Prisma has no native geometry type. Postgres Row-Level Security keyed on `clientId` (and `brokerOrganisationId`) sits underneath Prisma's own scoping as defense-in-depth.
+- **Auth — Clerk** (template default, retained — not a deviation). Email OTP/magic-link only initially. Role (`INSURER_ADMIN`/`BROKER`/`CLIENT`) and scope (`clientId`/`brokerOrganisationId`) live as Clerk user metadata, carried into a session-token claim that Postgres RLS and Prisma scoping key on. No insured-person or financial data ever reaches Clerk.
+- **Mapping — MapLibre GL JS (via react-map-gl) + deck.gl**, self-hosted PMTiles/Protomaps basemap, PostGIS-backed vector tiles via Martin for live risk layers. Chosen over Mapbox (paid beyond a free tier) and over Google Maps (whose terms forbid permanently storing/caching POI data, which the geofencing engine requires).
+- **Data-dense tables — TanStack Table** (Tier 2 addition) for Endorsement history, cross-client rollups, and the ExternalSignal review queue: sortable, filterable, virtualized.
+- **Charts — Recharts** (addition) for premium/aggregate trend charts, using the brand's fixed Indigo/Pink tint scales, not arbitrary opacities.
+- **Background jobs — Inngest** (addition) for scheduled feed fetches and AI news-scan runs, keeping cron-style work durable and out of the request path.
+- **AI provider — Anthropic API** (Tier-3 addition per `50-ai-tooling.mdc`) for both governed AI features (Structure Chat, news monitoring); retrieval-grounded/extractive only, evaluated against data-retention/DPA rejection criteria before any client personal data reaches a prompt.
+- **Observability — Sentry** (addition) for error tracking/performance, wired per `62-deployment-observability.mdc`; structured JSON logs carry a correlation/request ID end-to-end.
+- **E2E — Playwright** (template default, retained) added alongside Vitest for critical multi-role flows (login/role-switch, recalibration wizard, premium calculator, AI confirm).
+- **API shape** — Next.js Route Handlers (`/api/v1/...`) for anything needing versioning/rate limiting/external integration; Server Actions for internal form mutations. Consistent error envelope: `{ error: { code, message, details?, requestId } }`. Mutating, retryable endpoints accept an idempotency key. Large lists use cursor-based pagination.
 
 ## Architecture decisions
 
-- Single-page Vite app under `src/`; path alias `@/` → `src/`.
-- Agent governance: `.cursor/rules/` (advisory), `.cursor/hooks.json` (runtime), Husky + GitHub Actions (automation).
-- Branch protection on `main` requires three CI jobs before merge.
+- Multi-tenant, client-first / broker-second scoping: Insurer sees all clients; Broker sees only clients its BrokerOrganisation is assigned to (via `ClientBrokerAssignment`); Client sees only its own data. Enforced at both the Prisma query layer and Postgres RLS.
+- Territory risk data is shared/global (one Insurer-maintained source of truth); everything else (`MemberOrganisation`, `OrganisationLocation`, `Policy` and its children, `RiskMixPolicy`, `RecalibrationBatch`) is scoped by `clientId`.
+- AI features (Structure Chat, news monitoring) are strictly advisory and human-gated: the AI drafts against the real schema or extracts quoted, verified evidence; nothing is real or repriced until a human confirms. Every draft and decision is stored immutably for audit.
+- Delete/update FK policy is explicit, not defaulted: financial/audit-bearing relationships (`Endorsement → OrganisationLocation`, `TerritoryRiskHistory → Territory`, `PolicyStructureSession → Policy`) are `RESTRICT`; purely compositional drafts may cascade.
+- High-stakes actions (deleting a Territory, confirming an AI-drafted policy, reversing an Endorsement) always require an explicit, named confirm step.
+- Agent governance: `.cursor/rules/` (advisory), `.cursor/hooks.json` (runtime), Husky + GitHub Actions (automation). Branch protection on `main` requires the CI jobs to pass before merge.
 
 ## Data classification (POPIA)
 
-- Personal-information categories this app touches: None; templated demo data only (`formatZar` uses fake amounts).
-- Retention / access constraints: N/A for templated data. Real projects must fill this section in their own `90-project-context.mdc`.
+- Personal-information categories this app touches: insured person / employee names and details (via `OrganisationLocation` headcounts and any future member-level detail), Clerk login identity (email, name) for platform users. No insured-person or financial data is ever sent to Clerk or to the Anthropic API.
+- Retention / anonymization: deletion requests against personal data are served by a tested anonymization code path that strips identifying fields while preserving the count/rate/history records the underwriting file depends on — hard-delete is not used, since it would destroy required underwriting evidence.
+- Backup / retention window: Neon point-in-time-recovery window and exact retention period — **not yet decided; must be settled before this project holds anything beyond local/free-tier dev data.**
+- Real client data or secrets must never enter this repository (`.env`, exports, seed data with real names) — seed scripts use the workbook structure with anonymized/placeholder values only.
+- Repo visibility: public (chosen deliberately — see below). Public visibility must never be treated as license to relax the no-real-data rule above; it is exactly why that rule is enforced instead.
 
 ## Out of scope / do not touch
 
-- Do not treat `src/` demo code as production features — replace when starting a real app.
+- Claims management — no claims register, status tracking, or claims-ratio feed into risk scoring.
+- Invoicing & payment reconciliation — the platform computes premium/aggregate figures only; no debtor/arrears tracking or bank-receipt reconciliation.
+- Deeper SA insurance compliance beyond POPIA — no FAIS conduct-of-business features, binder-function workflow, or Policyholder Protection Rules tooling.
+- Certificates of insurance / Policy Schedule PDF generation — not built; the brand's document spec is reference material only, kept in case this changes later.
+- Do not treat `src/` demo code (`Greeting.tsx`, `currency.ts`) as production features — replace when the Foundations phase begins.
 - Do not commit `.env`, real client data, or credentials.
 - Do not weaken CI, hooks, or security scans without explicit instruction.
+
+## Repo visibility note
+
+This repo is public. That decision was made deliberately, on a personal (non-Enterprise) GitHub account, to unlock two features that are otherwise unavailable: branch protection on `main` (Free plan blocks this on private repos; Pro would unlock it) and CI build-provenance attestation (unavailable on private repos below GitHub Enterprise Cloud — Pro/Team do not unlock it). Public visibility is safe here specifically because of the no-real-data rule above: this repo's source code is never supposed to contain real client/insured-person data or secrets. Before any real client data enters the *running application* (not the repo), ownership must move to a Lombard-owned GCP project/billing account as already noted in the platform plan — that is a separate, hosting-level concern from repo visibility.
