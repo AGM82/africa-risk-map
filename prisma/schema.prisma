@@ -1,0 +1,64 @@
+// Prisma schema — Africa Risk Map Platform
+//
+// Domain models (Territory, Client, MemberOrganisation, Policy, etc.) are added
+// incrementally by their own to-dos per the platform plan. This file currently
+// establishes only the foundations-level concerns:
+//   - PostgreSQL + PostGIS datasource, pooled (runtime) vs direct (migrations) URLs
+//   - The AuditLogEntry model, which every later to-do's mutations write to
+//   - The Row-Level Security pattern (see prisma/migrations/0001_init/migration.sql)
+//     that every later clientId-scoped table must replicate
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  extensions = [postgis]
+}
+
+/// Platform role, mirrored from Clerk user metadata into the session-token claim
+/// that both Prisma query scoping and Postgres RLS policies key on.
+enum UserRole {
+  INSURER_ADMIN
+  BROKER
+  CLIENT
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  ANONYMIZE
+  CONFIRM
+  LOGIN
+  ACCESS_CHANGE
+}
+
+/// Immutable, append-only audit trail for every state-changing action across the
+/// platform (territory edits, endorsements, policy confirmations, user-admin
+/// access changes, AI-drafted-record confirmations, etc.). Never updated or
+/// deleted by application code.
+///
+/// `clientId` is null for actions against shared/global entities (e.g. Territory,
+/// user administration); non-null for client-scoped entities. This is the field
+/// the RLS policy below filters on.
+model AuditLogEntry {
+  id           String      @id @default(cuid())
+  actorUserId  String
+  actorRole    UserRole
+  clientId     String?
+  entityType   String
+  entityId     String
+  action       AuditAction
+  diff         Json?
+  createdAt    DateTime    @default(now())
+
+  @@index([clientId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_log_entries")
+}

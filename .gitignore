@@ -3,11 +3,18 @@ dist/
 build/
 .next/
 coverage/
+*.tsbuildinfo
 .env
 .env.*
 !.env.example
 *.local
 .DS_Store
+
+# Playwright artefacts (may contain session tokens — never commit)
+/playwright-report/
+/test-results/
+/playwright/.clerk/
+/blob-report/
 
 # Agent hook audit logs and local state
 .cursor/hooks/logs/
