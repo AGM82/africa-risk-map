@@ -5,7 +5,7 @@ import { App } from "./App";
 describe("App", () => {
   it("renders the page heading", () => {
     render(<App />);
-    expect(screen.getByRole("heading", { name: /cursor project guardrails/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /africa risk map/i })).toBeInTheDocument();
   });
 
   it("renders the example premium card", () => {

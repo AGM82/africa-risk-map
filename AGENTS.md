@@ -6,7 +6,7 @@ scoped rules live in `.cursor/rules/*.mdc`; this file is the always-on summary.
 
 ## Capability model
 
-This template enables a single developer to operate at expert-team level across
+This project enables a single developer to operate at expert-team level across
 six domains. Apply the relevant domain rules whenever the work touches that area:
 
 | Domain                         | Rule file                         |
@@ -110,8 +110,8 @@ make failing code pass, and do not disable a lint/type rule to silence an error
 - Backend & API design: `.cursor/rules/60-backend-api.mdc`
 - Database & data access: `.cursor/rules/61-database.mdc`
 - Deployment & observability: `.cursor/rules/62-deployment-observability.mdc`
-- Project specifics (fill this in): `.cursor/rules/90-project-context.mdc`
-- Playbook dashboard: `playbook.html` (hosted on Cloudflare Pages)
+- Project specifics: `.cursor/rules/90-project-context.mdc`
+- Product plan: `.cursor/plans/africa-risk-map-platform-plan.md`
 
 > Keep this file in sync with `.cursor/rules/00-core.mdc`. If the two ever
 > disagree, the rule files are authoritative for Cursor; this file is what

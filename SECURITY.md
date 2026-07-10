@@ -1,6 +1,6 @@
 # Security & Data Handling
 
-This project follows an OWASP-aligned security baseline and South African POPIA obligations. The enforced rules live in `.cursor/rules/10-security-popia.mdc`.
+This project follows an OWASP-aligned security baseline and South African POPIA obligations. The enforced rules live in `.cursor/rules/10-security-popia.mdc`. Project-specific data classification is in `.cursor/rules/90-project-context.mdc`.
 
 ## Non-negotiables
 
@@ -11,7 +11,7 @@ This project follows an OWASP-aligned security baseline and South African POPIA 
 
 ## Data classification
 
-Define, per project, the categories of personal information the application processes and the retention and access constraints that apply. See `.cursor/rules/90-project-context.mdc` under Data classification.
+See `.cursor/rules/90-project-context.mdc` under Data classification for the personal-information categories this app touches, retention/anonymization rules, and the backup/PITR decision still outstanding before real client data enters the running system.
 
 ## Enforcement
 
@@ -25,7 +25,7 @@ These rules are backed by automated controls, not just prose:
 
 Report a suspected vulnerability or personal-information incident privately — do **not** open a public issue or PR.
 
-- Email the security contact: `security@<your-domain>` (replace with your team's address).
+- Prefer [GitHub private vulnerability reporting](https://github.com/AGM82/africa-risk-map/security/advisories/new) for this repository.
+- For a suspected POPIA data incident, notify the Human Risks / Lombard Information Officer immediately so statutory notification timelines can be assessed.
 - Include the affected component, reproduction steps, and any data potentially exposed.
-- For a suspected POPIA data incident, notify the Information Officer immediately so statutory notification timelines can be assessed.
 - Expected acknowledgement within 2 business days. Please allow a fix to be released and coordinated before any public disclosure.

@@ -14,9 +14,7 @@ export type GreetingProps = {
 export function Greeting({ name }: GreetingProps) {
   return (
     <div className="border-border bg-card flex flex-col items-start gap-3 rounded-lg border p-6 shadow-sm">
-      <p className="text-muted-foreground text-sm">
-        Hello, {name}. Welcome to the guardrails template.
-      </p>
+      <p className="text-muted-foreground text-sm">Hello, {name}. Welcome to Africa Risk Map.</p>
       <Button size="sm">
         <Sparkles />
         Get started
