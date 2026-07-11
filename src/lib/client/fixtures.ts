@@ -24,6 +24,14 @@ export const CLIENT_BROKER_FIXTURES: ClientBrokerSeed = {
       createdAt: SEED_DATE,
       updatedAt: SEED_DATE,
     },
+    {
+      id: "client-aparks",
+      name: "African Parks (demo)",
+      code: "aparks",
+      status: "ACTIVE",
+      createdAt: SEED_DATE,
+      updatedAt: SEED_DATE,
+    },
   ],
   brokers: [
     {
@@ -55,6 +63,15 @@ export const CLIENT_BROKER_FIXTURES: ClientBrokerSeed = {
       id: "assignment-sample-partner",
       clientId: "client-sample",
       brokerOrganisationId: "broker-partner",
+      effectiveFrom: SEED_DATE,
+      effectiveTo: null,
+      createdAt: SEED_DATE,
+      updatedAt: SEED_DATE,
+    },
+    {
+      id: "assignment-aparks-lombard",
+      clientId: "client-aparks",
+      brokerOrganisationId: "broker-lombard",
       effectiveFrom: SEED_DATE,
       effectiveTo: null,
       createdAt: SEED_DATE,

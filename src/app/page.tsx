@@ -129,8 +129,11 @@ export default async function HomePage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="text-muted-foreground text-sm">
-              Per-client policy schedules and the AI-assisted Structure Chat. Built in the
-              policy-structure to-dos.
+              <Link href="/policy" className="text-foreground font-medium underline">
+                Policy schedules
+              </Link>{" "}
+              — Fixed Sum (GPA) and Earnings-Based (Stated Benefits) categories, rates, and risk
+              mix.
             </CardContent>
           </Card>
         </div>

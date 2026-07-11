@@ -115,6 +115,9 @@ model Client {
   assignments             ClientBrokerAssignment[]
   memberOrganisations     MemberOrganisation[]
   recalibrationBatches    RecalibrationBatch[]
+  paymentTerms            PaymentTerms[]
+  policies                Policy[]
+  riskMixPolicies         RiskMixPolicy[]
 
   @@index([status])
   @@map("clients")
@@ -187,6 +190,7 @@ model Territory {
   updatedAt                DateTime                @updatedAt
   history                  TerritoryRiskHistory[]
   organisationLocations    OrganisationLocation[]
+  territoryBenefitEligibilities TerritoryBenefitEligibility[]
 
   @@unique([country, subRegion])
   @@index([riskCategory])
@@ -426,4 +430,183 @@ model RecalibrationBatch {
   @@index([clientId])
   @@index([status])
   @@map("recalibration_batches")
+}
+
+// ---------------------------------------------------------------------------
+// Client-scoped Policy Schedule (annual term) + RiskMixPolicy.
+// benefitScale: FIXED_SUM (GPA) vs EARNINGS_BASED (Stated Benefits).
+// OrganisationLocation.coverCategoryId FK lands in a later to-do.
+// ---------------------------------------------------------------------------
+
+enum PolicyStatus {
+  QUOTED
+  BOUND
+  ON_RISK
+  EXPIRED
+  RENEWED
+}
+
+/// GPA Fixed Sum vs Stated Benefits (earnings-based compensation).
+enum BenefitScale {
+  FIXED_SUM
+  EARNINGS_BASED
+}
+
+enum RateBasis {
+  PER_PERSON_PER_MONTH
+  PER_ANNUM
+  PERCENT_OF_WAGE_ROLL
+}
+
+enum BenefitType {
+  DEATH
+  PTD
+  TTD
+  MEDICAL
+  EVACUATION
+}
+
+enum BenefitAmountBasis {
+  LUMP_SUM
+  PERIODIC
+}
+
+enum PaymentFrequency {
+  MONTHLY_BY_NUMBERS
+  ANNUAL_WITH_ADJUSTMENT
+  ANNUAL_FLAT
+}
+
+/// How a Policy bills (frequency + aggregate fund treatment).
+model PaymentTerms {
+  id                      String           @id @default(cuid())
+  clientId                String
+  client                  Client           @relation(fields: [clientId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  frequency               PaymentFrequency
+  depositMinPremium       Decimal?         @db.Decimal(14, 2)
+  adjustmentCadenceMonths Int?
+  aggregateIsClientFund   Boolean          @default(true)
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
+  policies                Policy[]
+
+  @@index([clientId])
+  @@map("payment_terms")
+}
+
+/// One annual Policy Schedule per client per policyYear.
+model Policy {
+  id                   String         @id @default(cuid())
+  clientId             String
+  client               Client         @relation(fields: [clientId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  policyYear           String
+  inceptionDate        DateTime
+  expiryDate           DateTime
+  status               PolicyStatus   @default(QUOTED)
+  benefitScale         BenefitScale   @default(FIXED_SUM)
+  paymentTermsId       String
+  paymentTerms         PaymentTerms   @relation(fields: [paymentTermsId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  underwriterUserId    String?
+  brokerOrganisationId String?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  coverCategories      CoverCategory[]
+
+  @@unique([clientId, policyYear])
+  @@index([clientId])
+  @@index([status])
+  @@index([paymentTermsId])
+  @@map("policies")
+}
+
+/// Insured-person category within a Policy (rates + plan type + benefits).
+model CoverCategory {
+  id                     String           @id @default(cuid())
+  policyId               String
+  policy                 Policy           @relation(fields: [policyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  clientId               String
+  categoryLabel          String
+  planType               PlanType
+  declaredInsuredCount   Int              @default(0)
+  /// Anonymised aggregate wage roll for EARNINGS_BASED rating (optional).
+  declaredAnnualWageRoll Decimal?         @db.Decimal(16, 2)
+  premiumAmount          Decimal          @db.Decimal(14, 4)
+  premiumBasis           RateBasis
+  premiumIncludesVat     Boolean          @default(true)
+  aggregateAmount        Decimal          @db.Decimal(14, 4)
+  aggregateBasis         RateBasis
+  aggregateExcludesVat   Boolean          @default(true)
+  sortOrder              Int              @default(0)
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+  benefitLines           BenefitLine[]
+  territoryEligibilities TerritoryBenefitEligibility[]
+
+  @@index([policyId])
+  @@index([clientId])
+  @@index([planType])
+  @@map("cover_categories")
+}
+
+/// Benefit schedule line (Death/PTD/TTD/Medical/Evac) — Fixed Sum or Earnings fields.
+model BenefitLine {
+  id                 String             @id @default(cuid())
+  coverCategoryId    String
+  coverCategory      CoverCategory      @relation(fields: [coverCategoryId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  clientId           String
+  benefitType        BenefitType
+  amountBasis        BenefitAmountBasis
+  waitingPeriodDays  Int?
+  maxBenefitWeeks    Int?
+  notes              String?
+  /// FIXED_SUM amount (Death/PTD sum; TTD weekly; Medical/Evac limit).
+  fixedAmount        Decimal?           @db.Decimal(14, 2)
+  /// EARNINGS_BASED: multiple of annual earnings (Death/PTD).
+  earningsMultiple   Decimal?           @db.Decimal(8, 4)
+  /// EARNINGS_BASED: percent of weekly earnings (TTD), e.g. 100.
+  percentOfEarnings  Decimal?           @db.Decimal(8, 4)
+  /// Optional rand cap on an earnings-derived benefit.
+  maxAmountCap       Decimal?           @db.Decimal(14, 2)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  @@unique([coverCategoryId, benefitType])
+  @@index([clientId])
+  @@map("benefit_lines")
+}
+
+/// Which CoverCategories a Territory may use (policy-year aware via CoverCategory).
+model TerritoryBenefitEligibility {
+  id              String        @id @default(cuid())
+  territoryId     String
+  territory       Territory     @relation(fields: [territoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  coverCategoryId String
+  coverCategory   CoverCategory @relation(fields: [coverCategoryId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  clientId        String
+  createdAt       DateTime      @default(now())
+
+  @@unique([territoryId, coverCategoryId])
+  @@index([clientId])
+  @@index([territoryId])
+  @@index([coverCategoryId])
+  @@map("territory_benefit_eligibilities")
+}
+
+/// Per-client target mix of covered lives across risk tiers (rate-guarantee guard).
+model RiskMixPolicy {
+  id                 String    @id @default(cuid())
+  clientId           String
+  client             Client    @relation(fields: [clientId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  targetLowMedPct    Decimal   @db.Decimal(5, 2)
+  targetHighPct      Decimal   @db.Decimal(5, 2)
+  targetVeryHighPct  Decimal   @db.Decimal(5, 2)
+  tolerancePct       Decimal   @db.Decimal(5, 2)
+  effectiveFrom      DateTime  @default(now())
+  effectiveTo        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([clientId])
+  @@index([effectiveTo])
+  @@map("risk_mix_policies")
 }
