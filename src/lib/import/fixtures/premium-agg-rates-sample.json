@@ -1,0 +1,9 @@
+{
+  "headers": ["Policy Year", "Category Label", "Plan Type", "Premium pppm", "Aggregate pppm"],
+  "rows": [
+    ["2025-2026", "Category 1 — Essential Cover", "Essential", "24.06", "35.00"],
+    ["2025-2026", "Category 3 — Premium Cover", "Premium", "77.44", "112.44"],
+    ["2026-2027", "Category 1 — Essential Cover", "Essential", "24.00", "40.50"],
+    ["", "Bad Row", "Essential", "24.00", "40.50"]
+  ]
+}
