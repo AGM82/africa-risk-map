@@ -63,6 +63,11 @@ export function createFixtureOrgLocationRepository(
         riskMgmtPlanOnFile: input.riskMgmtPlanOnFile ?? false,
         crisisMgmtPlanOnFile: input.crisisMgmtPlanOnFile ?? false,
         fullUnderwritingApproved: input.fullUnderwritingApproved ?? false,
+        contactName: input.contactName ?? null,
+        contactEmail: input.contactEmail ?? null,
+        contactPhone: input.contactPhone ?? null,
+        operationsNote: input.operationsNote ?? null,
+        lastCensusAcceptedAt: null,
         createdAt: now,
         updatedAt: now,
       };
@@ -88,6 +93,13 @@ export function createFixtureOrgLocationRepository(
           : {}),
         ...(input.fullUnderwritingApproved !== undefined
           ? { fullUnderwritingApproved: input.fullUnderwritingApproved }
+          : {}),
+        ...(input.contactName !== undefined ? { contactName: input.contactName } : {}),
+        ...(input.contactEmail !== undefined ? { contactEmail: input.contactEmail } : {}),
+        ...(input.contactPhone !== undefined ? { contactPhone: input.contactPhone } : {}),
+        ...(input.operationsNote !== undefined ? { operationsNote: input.operationsNote } : {}),
+        ...(input.lastCensusAcceptedAt !== undefined
+          ? { lastCensusAcceptedAt: input.lastCensusAcceptedAt }
           : {}),
         updatedAt: new Date(),
       };

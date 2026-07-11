@@ -10,6 +10,10 @@ import {
   createMemberOrganisationAction,
   updateMemberOrganisationFlagsAction,
 } from "@/app/organisations/actions";
+import {
+  createCensusInvitationAction,
+  createCensusStubOrgAction,
+} from "@/app/census-review/actions";
 import type { MemberOrganisationStatus, PlanType } from "@/lib/org-location/types";
 import type { UserRole } from "@/lib/user-admin/types";
 
@@ -30,6 +34,12 @@ export type OrganisationRowView = Readonly<{
   riskMgmtPlanOnFile: boolean;
   crisisMgmtPlanOnFile: boolean;
   fullUnderwritingApproved: boolean;
+  contactName: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  operationsNote: string | null;
+  lastCensusAcceptedAtIso: string | null;
+  openInvitationPurpose: "NEW" | "UPDATE" | null;
   locations: readonly LocationRowView[];
 }>;
 
@@ -58,6 +68,7 @@ type OrganisationsWorkspaceProps = Readonly<{
   territories: readonly TerritoryOption[];
   coverCategories: readonly CoverCategoryOption[];
   canWrite: boolean;
+  canInviteCensus: boolean;
 }>;
 
 function formString(formData: FormData, key: string): string {
@@ -80,24 +91,69 @@ export function OrganisationsWorkspace({
   territories,
   coverCategories,
   canWrite,
+  canInviteCensus,
 }: OrganisationsWorkspaceProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [linkCopiedOrgId, setLinkCopiedOrgId] = useState<string | null>(null);
+  const [linkFallbackUrl, setLinkFallbackUrl] = useState<string | null>(null);
   const [expandedOrgId, setExpandedOrgId] = useState<string | null>(rows[0]?.id ?? null);
 
   function handleCreateOrg(formData: FormData) {
     if (activeClientId === null) return;
     setError(null);
     startTransition(async () => {
-      const result = await createMemberOrganisationAction({
+      if (canInviteCensus && !canWrite) {
+        const contactName = formString(formData, "contactName");
+        const contactEmail = formString(formData, "contactEmail");
+        const result = await createCensusStubOrgAction({
+          clientId: activeClientId,
+          name: formString(formData, "name"),
+          ...(contactName ? { contactName } : {}),
+          ...(contactEmail ? { contactEmail } : {}),
+        });
+        if (!result.ok) {
+          setError(result.error);
+          return;
+        }
+      } else {
+        const result = await createMemberOrganisationAction({
+          clientId: activeClientId,
+          name: formString(formData, "name"),
+          defaultPlanType: formString(formData, "defaultPlanType") as PlanType,
+        });
+        if (!result.ok) {
+          setError(result.error);
+          return;
+        }
+      }
+      router.refresh();
+    });
+  }
+
+  function handleCopyCensusLink(memberOrganisationId: string, purpose: "NEW" | "UPDATE") {
+    if (activeClientId === null) return;
+    setError(null);
+    setLinkCopiedOrgId(null);
+    setLinkFallbackUrl(null);
+    startTransition(async () => {
+      const result = await createCensusInvitationAction({
         clientId: activeClientId,
-        name: formString(formData, "name"),
-        defaultPlanType: formString(formData, "defaultPlanType") as PlanType,
+        memberOrganisationId,
+        purpose,
       });
       if (!result.ok) {
         setError(result.error);
         return;
+      }
+      const absolute = `${window.location.origin}${result.data.path}`;
+      try {
+        await navigator.clipboard.writeText(absolute);
+        setLinkCopiedOrgId(memberOrganisationId);
+      } catch {
+        setLinkCopiedOrgId(memberOrganisationId);
+        setLinkFallbackUrl(absolute);
       }
       router.refresh();
     });
@@ -164,7 +220,7 @@ export function OrganisationsWorkspace({
           </p>
         ) : null}
 
-        {canWrite && activeClientId !== null ? (
+        {(canWrite || canInviteCensus) && activeClientId !== null ? (
           <section aria-labelledby="create-org-heading" className="space-y-3 rounded-lg border p-4">
             <h2 id="create-org-heading" className="text-base font-semibold tracking-tight">
               Add member organisation
@@ -178,17 +234,37 @@ export function OrganisationsWorkspace({
                   className="border-input bg-background rounded-md border px-2 py-1.5"
                 />
               </label>
-              <label className="flex flex-col gap-1 text-sm">
-                Default plan
-                <select
-                  name="defaultPlanType"
-                  defaultValue="ESSENTIAL"
-                  className="border-input bg-background rounded-md border px-2 py-1.5"
-                >
-                  <option value="ESSENTIAL">Essential</option>
-                  <option value="PREMIUM">Premium</option>
-                </select>
-              </label>
+              {canInviteCensus && !canWrite ? (
+                <>
+                  <label className="flex flex-col gap-1 text-sm">
+                    Contact name
+                    <input
+                      name="contactName"
+                      className="border-input bg-background rounded-md border px-2 py-1.5"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 text-sm">
+                    Contact email
+                    <input
+                      name="contactEmail"
+                      type="email"
+                      className="border-input bg-background rounded-md border px-2 py-1.5"
+                    />
+                  </label>
+                </>
+              ) : (
+                <label className="flex flex-col gap-1 text-sm">
+                  Default plan
+                  <select
+                    name="defaultPlanType"
+                    defaultValue="ESSENTIAL"
+                    className="border-input bg-background rounded-md border px-2 py-1.5"
+                  >
+                    <option value="ESSENTIAL">Essential</option>
+                    <option value="PREMIUM">Premium</option>
+                  </select>
+                </label>
+              )}
               <Button type="submit" disabled={pending}>
                 Create
               </Button>
@@ -213,6 +289,10 @@ export function OrganisationsWorkspace({
                       <p className="text-muted-foreground text-xs">
                         {row.status} · default {row.defaultPlanType.toLowerCase()} ·{" "}
                         {row.locations.length} location{row.locations.length === 1 ? "" : "s"}
+                        {row.contactEmail ? ` · ${row.contactEmail}` : ""}
+                        {row.lastCensusAcceptedAtIso
+                          ? ` · last census ${new Date(row.lastCensusAcceptedAtIso).toLocaleDateString()}`
+                          : ""}
                       </p>
                     </div>
                     <Button
@@ -227,6 +307,55 @@ export function OrganisationsWorkspace({
 
                   {expanded ? (
                     <div className="space-y-4 border-t p-4">
+                      <dl className="text-muted-foreground grid gap-2 text-sm sm:grid-cols-2">
+                        <div>
+                          <dt className="text-foreground font-medium">Contact</dt>
+                          <dd>
+                            {row.contactName ?? "—"}
+                            {row.contactEmail ? ` · ${row.contactEmail}` : ""}
+                            {row.contactPhone ? ` · ${row.contactPhone}` : ""}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-foreground font-medium">Operations note</dt>
+                          <dd>{row.operationsNote ?? "—"}</dd>
+                        </div>
+                      </dl>
+
+                      {canInviteCensus ? (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={pending}
+                            onClick={() =>
+                              handleCopyCensusLink(
+                                row.id,
+                                row.status === "ACTIVE" ? "UPDATE" : "NEW",
+                              )
+                            }
+                          >
+                            Copy census link
+                          </Button>
+                          {row.openInvitationPurpose ? (
+                            <span className="text-muted-foreground text-xs">
+                              Open {row.openInvitationPurpose.toLowerCase()} invite
+                            </span>
+                          ) : null}
+                          {linkCopiedOrgId === row.id ? (
+                            <span className="text-xs text-emerald-700">
+                              {linkFallbackUrl ? "Copy this link:" : "Link copied"}
+                            </span>
+                          ) : null}
+                          {linkCopiedOrgId === row.id && linkFallbackUrl ? (
+                            <span className="text-muted-foreground text-xs break-all">
+                              {linkFallbackUrl}
+                            </span>
+                          ) : null}
+                        </div>
+                      ) : null}
+
                       {canWrite ? (
                         <div className="flex flex-wrap gap-4 text-sm">
                           <label className="flex items-center gap-2">

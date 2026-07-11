@@ -1,4 +1,7 @@
 import { createFixtureAuditWriter } from "@/lib/audit/writer";
+import { createFixtureCensusRepository } from "@/lib/census/fixture-repository";
+import { CENSUS_FIXTURES } from "@/lib/census/fixtures";
+import { createCensusService } from "@/lib/census/service";
 import { createFixtureClientBrokerRepository } from "@/lib/client/fixture-repository";
 import { CLIENT_BROKER_FIXTURES } from "@/lib/client/fixtures";
 import { createClientBrokerService } from "@/lib/client/service";
@@ -77,6 +80,15 @@ function buildFixtureAdminServices() {
     clientBroker,
     audit,
   );
+  const census = createCensusService(
+    createFixtureCensusRepository(CENSUS_FIXTURES),
+    orgLocationRepo,
+    territoryRepo,
+    policy,
+    recalibration,
+    clientBroker,
+    audit,
+  );
   const structureChat = createStructureChatService(
     createFixtureStructureChatRepository(STRUCTURE_CHAT_FIXTURES),
     clientBroker,
@@ -97,6 +109,7 @@ function buildFixtureAdminServices() {
     policy,
     premium,
     reporting,
+    census,
     structureChat,
     userAdmin,
   };
