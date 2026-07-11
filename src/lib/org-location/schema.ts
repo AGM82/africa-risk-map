@@ -17,6 +17,10 @@ export const memberOrganisationCreateSchema = z.object({
   riskMgmtPlanOnFile: z.boolean().optional(),
   crisisMgmtPlanOnFile: z.boolean().optional(),
   fullUnderwritingApproved: z.boolean().optional(),
+  contactName: z.string().trim().max(120).nullable().optional(),
+  contactEmail: z.string().trim().email().max(200).nullable().optional(),
+  contactPhone: z.string().trim().max(40).nullable().optional(),
+  operationsNote: z.string().trim().max(500).nullable().optional(),
 });
 
 export const memberOrganisationUpdateSchema = z
@@ -27,6 +31,11 @@ export const memberOrganisationUpdateSchema = z
     riskMgmtPlanOnFile: z.boolean().optional(),
     crisisMgmtPlanOnFile: z.boolean().optional(),
     fullUnderwritingApproved: z.boolean().optional(),
+    contactName: z.string().trim().max(120).nullable().optional(),
+    contactEmail: z.string().trim().email().max(200).nullable().optional(),
+    contactPhone: z.string().trim().max(40).nullable().optional(),
+    operationsNote: z.string().trim().max(500).nullable().optional(),
+    lastCensusAcceptedAt: z.coerce.date().nullable().optional(),
   })
   .refine(
     (v) =>
@@ -35,7 +44,12 @@ export const memberOrganisationUpdateSchema = z
       v.defaultPlanType !== undefined ||
       v.riskMgmtPlanOnFile !== undefined ||
       v.crisisMgmtPlanOnFile !== undefined ||
-      v.fullUnderwritingApproved !== undefined,
+      v.fullUnderwritingApproved !== undefined ||
+      v.contactName !== undefined ||
+      v.contactEmail !== undefined ||
+      v.contactPhone !== undefined ||
+      v.operationsNote !== undefined ||
+      v.lastCensusAcceptedAt !== undefined,
     { message: "Provide at least one field to update" },
   );
 

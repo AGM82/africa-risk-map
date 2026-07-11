@@ -50,6 +50,8 @@ The full product/architecture plan lives at `.cursor/plans/africa-risk-map-platf
 - User admin docs: `docs/user-admin.md`
 - Member org / location domain + fixtures: `src/lib/org-location/`
 - Org / location docs: `docs/org-location.md`
+- Census intake (profile + magic-link) domain: `src/lib/census/`
+- Census intake docs: `docs/census-intake.md`
 - Recalibration domain + fixtures: `src/lib/recalibration/`
 - Recalibration docs: `docs/recalibration.md`
 - Policy schedule domain + fixtures: `src/lib/policy/`

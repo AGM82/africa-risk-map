@@ -3,6 +3,7 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 const isPublicRoute = createRouteMatcher([
   "/sign-in(.*)",
   "/sign-up(.*)",
+  "/census(.*)", // Magic-link census intake — token-authenticated, not Clerk
   "/api/inngest", // Inngest calls this with its own signing-key auth, not Clerk
 ]);
 
