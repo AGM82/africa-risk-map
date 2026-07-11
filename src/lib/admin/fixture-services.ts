@@ -5,6 +5,9 @@ import { createClientBrokerService } from "@/lib/client/service";
 import { createFixtureOrgLocationRepository } from "@/lib/org-location/fixture-repository";
 import { ORG_LOCATION_FIXTURES } from "@/lib/org-location/fixtures";
 import { createOrgLocationService } from "@/lib/org-location/service";
+import { createFixtureRecalibrationRepository } from "@/lib/recalibration/fixture-repository";
+import { RECALIBRATION_FIXTURES } from "@/lib/recalibration/fixtures";
+import { createRecalibrationService } from "@/lib/recalibration/service";
 import { createFixtureTerritoryRepository } from "@/lib/territory/fixture-repository";
 import { TERRITORY_FIXTURES } from "@/lib/territory/fixtures";
 import { createFixtureUserDirectory } from "@/lib/user-admin/directory";
@@ -13,11 +16,11 @@ import { createUserAdminService } from "@/lib/user-admin/service";
 
 /**
  * Builds the admin services wired to in-memory fixtures. Used by the /clients,
- * /organisations, and /admin/users surfaces (and server actions) until a
- * Prisma-backed repository/directory is provisioned with Neon + Clerk.
+ * /organisations, /recalibration, and /admin/users surfaces (and server actions)
+ * until a Prisma-backed repository is provisioned with Neon + Clerk.
  *
- * A single shared audit writer is returned so ACCESS_CHANGE entries from both
- * services land in one place within a request.
+ * A single shared audit writer is returned so ACCESS_CHANGE / CONFIRM entries
+ * from all services land in one place within a request.
  */
 export function createFixtureAdminServices() {
   const audit = createFixtureAuditWriter();
@@ -25,9 +28,16 @@ export function createFixtureAdminServices() {
     createFixtureClientBrokerRepository(CLIENT_BROKER_FIXTURES),
     audit,
   );
+  const orgLocationRepo = createFixtureOrgLocationRepository(ORG_LOCATION_FIXTURES);
   const orgLocation = createOrgLocationService(
-    createFixtureOrgLocationRepository(ORG_LOCATION_FIXTURES),
+    orgLocationRepo,
     createFixtureTerritoryRepository(TERRITORY_FIXTURES),
+    clientBroker,
+    audit,
+  );
+  const recalibration = createRecalibrationService(
+    createFixtureRecalibrationRepository(RECALIBRATION_FIXTURES),
+    orgLocationRepo,
     clientBroker,
     audit,
   );
@@ -36,5 +46,5 @@ export function createFixtureAdminServices() {
     clientBroker,
     audit,
   );
-  return { audit, clientBroker, orgLocation, userAdmin };
+  return { audit, clientBroker, orgLocation, recalibration, userAdmin };
 }

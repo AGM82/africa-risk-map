@@ -22,6 +22,7 @@ export async function createMemberOrganisationAction(input: {
     const { orgLocation } = createFixtureAdminServices();
     await orgLocation.createMemberOrganisation(auth, input);
     revalidatePath("/organisations");
+    revalidatePath("/recalibration");
     return { ok: true };
   } catch (error) {
     return { ok: false, error: toError(error) };
@@ -51,6 +52,7 @@ export async function updateMemberOrganisationFlagsAction(input: {
       ...(input.status !== undefined ? { status: input.status } : {}),
     });
     revalidatePath("/organisations");
+    revalidatePath("/recalibration");
     return { ok: true };
   } catch (error) {
     return { ok: false, error: toError(error) };
@@ -69,6 +71,7 @@ export async function createLocationAction(input: {
     const { orgLocation } = createFixtureAdminServices();
     await orgLocation.createLocation(auth, input);
     revalidatePath("/organisations");
+    revalidatePath("/recalibration");
     return { ok: true };
   } catch (error) {
     return { ok: false, error: toError(error) };
