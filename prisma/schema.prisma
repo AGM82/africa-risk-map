@@ -113,6 +113,7 @@ model Client {
   createdAt   DateTime                 @default(now())
   updatedAt   DateTime                 @updatedAt
   assignments ClientBrokerAssignment[]
+  memberOrganisations MemberOrganisation[]
 
   @@index([status])
   @@map("clients")
@@ -184,6 +185,7 @@ model Territory {
   createdAt                DateTime                @default(now())
   updatedAt                DateTime                @updatedAt
   history                  TerritoryRiskHistory[]
+  organisationLocations    OrganisationLocation[]
 
   @@unique([country, subRegion])
   @@index([riskCategory])
@@ -330,4 +332,69 @@ model Place {
   @@index([source])
   @@index([refreshId])
   @@map("places")
+}
+
+// ---------------------------------------------------------------------------
+// Client-scoped member organisations and their territory locations.
+// RLS keyed on clientId (same broker-visible-clients pattern as 0004).
+// CoverCategory FK lands in policy-structure; assignedPlanType is interim.
+// ---------------------------------------------------------------------------
+
+/// Lifecycle of a member organisation within a Client's book.
+enum MemberOrganisationStatus {
+  PENDING_SUBMISSION
+  UNDER_REVIEW
+  ACTIVE
+  DECLINED
+}
+
+/// Interim plan/category label until CoverCategory records exist per Policy.
+enum PlanType {
+  ESSENTIAL
+  PREMIUM
+}
+
+/// A reserve/park operator (or similar) belonging to a Client (e.g. GRAA).
+model MemberOrganisation {
+  id                       String                   @id @default(cuid())
+  clientId                 String
+  client                   Client                   @relation(fields: [clientId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  name                     String
+  status                   MemberOrganisationStatus @default(PENDING_SUBMISSION)
+  defaultPlanType          PlanType                 @default(ESSENTIAL)
+  riskMgmtPlanOnFile       Boolean                  @default(false)
+  crisisMgmtPlanOnFile     Boolean                  @default(false)
+  fullUnderwritingApproved Boolean                  @default(false)
+  createdAt                DateTime                 @default(now())
+  updatedAt                DateTime                 @updatedAt
+  locations                OrganisationLocation[]
+
+  @@index([clientId])
+  @@index([status])
+  @@map("member_organisations")
+}
+
+/// A member org's presence in a Territory with headcount and cover assignment.
+/// Endorsements (future) attach here; parent delete is RESTRICT once live.
+model OrganisationLocation {
+  id                    String             @id @default(cuid())
+  clientId              String
+  memberOrganisationId  String
+  memberOrganisation    MemberOrganisation @relation(fields: [memberOrganisationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  territoryId           String
+  territory             Territory          @relation(fields: [territoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  /// Site label within the territory (e.g. park/reserve name).
+  siteName              String
+  headcount             Int                @default(0)
+  /// Interim until CoverCategory FK is added in policy-structure.
+  assignedPlanType      PlanType
+  /// Nullable FK placeholder for policy-structure to wire CoverCategory.id.
+  coverCategoryId       String?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  @@index([clientId])
+  @@index([memberOrganisationId])
+  @@index([territoryId])
+  @@map("organisation_locations")
 }

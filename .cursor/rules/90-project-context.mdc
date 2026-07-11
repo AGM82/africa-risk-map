@@ -48,6 +48,8 @@ The full product/architecture plan lives at `.cursor/plans/africa-risk-map-platf
 - Client / broker docs: `docs/client-broker.md`
 - User admin + Clerk directory port: `src/lib/user-admin/`
 - User admin docs: `docs/user-admin.md`
+- Member org / location domain + fixtures: `src/lib/org-location/`
+- Org / location docs: `docs/org-location.md`
 - Audit writer port: `src/lib/audit/`
 - Auth context resolution: `src/lib/auth/session.ts`, `src/lib/auth/types.ts`, `src/lib/auth/tenant-scope.ts`
 - API error envelope: `src/lib/api/error-envelope.ts`
