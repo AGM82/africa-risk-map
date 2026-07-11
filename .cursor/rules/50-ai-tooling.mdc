@@ -20,7 +20,7 @@ This rule defines how AI tools are evaluated, adopted, and replaced. The goal is
 | Data analysis | — | Open |
 | Documentation | — | Open |
 
-Update this table when a tool is added or replaced. The bi-weekly AI review monitors this stack quarterly.
+Update this table when a tool is added or replaced. Review the stack when adopting a new tool or when `/update-deps` / `/guardrail-upgrade` surfaces a candidate — no scheduled review workflow in this product repo.
 
 ## The evaluation framework
 
@@ -37,7 +37,7 @@ A tool is an Addition candidate when it addresses a capability the current stack
 4. **Evidence from use**: evidence comes from real usage reports, not marketing material. At least one credible independent source.
 5. **Single tool per category**: adding a tool must not create a redundant category. Maximum one primary tool per function.
 
-**Process:** Flag as a candidate in the bi-weekly AI review → human evaluates → add to stack and document in this file.
+**Process:** Flag as a candidate in the plan or a PR → human evaluates → add to stack and document in this file.
 
 ### Replacement (replaces Cursor or another active tool)
 

@@ -1,11 +1,4 @@
-Copyright (c) <YEAR> <COPYRIGHT HOLDER>. All rights reserved.
-
-> Per-project file. Choose the licence for each project before relying on it.
-> This template ships a proprietary "all rights reserved" notice as a safe
-> default. Replace <YEAR> and <COPYRIGHT HOLDER> (you, your employer, or another
-> entity). If you intend to open-source the project instead, replace this whole
-> file with the chosen licence text (e.g. MIT) and update the `license` field in
-> package.json accordingly. Delete this note once set.
+Copyright (c) 2026 Lombard Insurance Company Limited (Human Risks). All rights reserved.
 
 This software and its source code are proprietary and confidential.
 

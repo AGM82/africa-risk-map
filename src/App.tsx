@@ -6,9 +6,7 @@ export function App() {
   return (
     <main className="bg-background min-h-screen p-8">
       <div className="mx-auto max-w-md space-y-6">
-        <h1 className="text-foreground text-2xl font-bold tracking-tight">
-          Cursor Project Guardrails
-        </h1>
+        <h1 className="text-foreground text-2xl font-bold tracking-tight">Africa Risk Map</h1>
         <Greeting name="developer" />
         <Card>
           <CardHeader>

@@ -23,5 +23,3 @@
 ## Follow-ups
 
 <Anything deferred or worth a future ticket.>
-
-- [ ] Does this change affect `playbook.html`? (update if slash commands, tiers, bootstrap prompt, KB entries, or prompt library changed)
