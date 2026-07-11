@@ -32,6 +32,11 @@ const globalForFixtures = globalThis as unknown as {
   fixtureAdminServices?: FixtureAdminServices;
 };
 
+/**
+ * Shared in-memory fixture graph for local UI demos (persists across HMR within
+ * one Node process). Intentionally process-scoped until Prisma adapters land —
+ * not multi-tenant isolation for concurrent users on the same worker.
+ */
 function buildFixtureAdminServices() {
   const audit = createFixtureAuditWriter();
   const clientBroker = createClientBrokerService(

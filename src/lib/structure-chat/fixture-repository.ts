@@ -58,6 +58,9 @@ export function createFixtureStructureChatRepository(
       templates.set(record.id, record);
       return Promise.resolve(cloneTemplate(record));
     },
+    deleteTemplate(id) {
+      return Promise.resolve(templates.delete(id));
+    },
     listSessions(clientId) {
       const all = [...sessions.values()];
       const filtered =

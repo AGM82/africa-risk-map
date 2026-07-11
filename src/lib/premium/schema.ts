@@ -15,6 +15,12 @@ export const whatIfSimulateSchema = z.object({
   fullUnderwritingApproved: z.boolean().optional(),
 });
 
-export const whatIfConfirmSchema = whatIfSimulateSchema;
+export const whatIfConfirmSchema = whatIfSimulateSchema.refine(
+  (v) =>
+    (v.memberOrganisationId !== undefined && v.memberOrganisationId.length > 0) ||
+    (v.newOrganisationName !== undefined && v.newOrganisationName.length > 0),
+  { message: "Provide memberOrganisationId or newOrganisationName" },
+);
 
 export type WhatIfInput = z.infer<typeof whatIfSimulateSchema>;
+export type WhatIfConfirmInput = z.infer<typeof whatIfConfirmSchema>;

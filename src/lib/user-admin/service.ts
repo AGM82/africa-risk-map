@@ -60,6 +60,58 @@ export function createUserAdminService(
     throw new UserAdminAccessError();
   }
 
+  /** Drop scope fields that do not apply to the target role. */
+  function normalisedInviteScope(input: InviteUserInput): InviteUserInput {
+    if (input.role === "INSURER_ADMIN") {
+      return {
+        email: input.email,
+        role: input.role,
+        clientId: null,
+        brokerOrganisationId: null,
+      };
+    }
+    if (input.role === "BROKER") {
+      return {
+        email: input.email,
+        role: input.role,
+        clientId: null,
+        brokerOrganisationId: input.brokerOrganisationId ?? null,
+      };
+    }
+    return {
+      email: input.email,
+      role: input.role,
+      clientId: input.clientId ?? null,
+      brokerOrganisationId: null,
+    };
+  }
+
+  async function assertScopeEntitiesExist(target: InviteUserInput): Promise<void> {
+    if (target.role === "CLIENT" && target.clientId) {
+      try {
+        await clientBroker.getClient(
+          { userId: "system", role: "INSURER_ADMIN", clientId: null, brokerOrganisationId: null },
+          target.clientId,
+        );
+      } catch {
+        throw new UserAdminValidationError(`Unknown clientId: ${target.clientId}`);
+      }
+    }
+    if (target.role === "BROKER" && target.brokerOrganisationId) {
+      const brokers = await clientBroker.listBrokerOrganisations({
+        userId: "system",
+        role: "INSURER_ADMIN",
+        clientId: null,
+        brokerOrganisationId: null,
+      });
+      if (!brokers.some((b) => b.id === target.brokerOrganisationId)) {
+        throw new UserAdminValidationError(
+          `Unknown brokerOrganisationId: ${target.brokerOrganisationId}`,
+        );
+      }
+    }
+  }
+
   async function assertCanManageExistingUser(auth: AuthContext, user: ManagedUser): Promise<void> {
     if (auth.role === "INSURER_ADMIN") {
       return;
@@ -90,6 +142,8 @@ export function createUserAdminService(
         const accessible = new Set(
           (await clientBroker.listAccessibleClients(auth)).map((c) => c.id),
         );
+        // Clerk getUserList cannot filter on publicMetadata; post-filter until a
+        // metadata-capable directory query exists (POPIA minimization residual).
         const all = await directory.list();
         return all.filter(
           (u) => u.role === "CLIENT" && u.clientId !== null && accessible.has(u.clientId),
@@ -100,18 +154,20 @@ export function createUserAdminService(
 
     async inviteUser(auth: AuthContext, input: InviteUserInput): Promise<ManagedUser> {
       const parsed = inviteUserSchema.parse(input);
-      const target: InviteUserInput = {
+      const target = normalisedInviteScope({
         email: parsed.email,
         role: parsed.role,
         clientId: parsed.clientId ?? null,
         brokerOrganisationId: parsed.brokerOrganisationId ?? null,
-      };
+      });
       await assertCanManageRole(auth, target);
+      await assertScopeEntitiesExist(target);
       const user = await directory.invite(target);
       await audit.append({
         actorUserId: auth.userId,
         actorRole: auth.role,
-        clientId: target.clientId ?? null,
+        // Platform staff invites stay insurer-scoped in the audit trail (null clientId).
+        clientId: target.role === "CLIENT" ? (target.clientId ?? null) : null,
         entityType: "User",
         entityId: user.id,
         action: "ACCESS_CHANGE",
@@ -131,17 +187,24 @@ export function createUserAdminService(
         throw new UserAdminAccessError();
       }
       await assertCanManageExistingUser(auth, existing);
-      await assertCanManageRole(auth, {
+      const normalised = normalisedInviteScope({
         email: existing.email,
         role: scope.role,
         clientId: scope.clientId,
         brokerOrganisationId: scope.brokerOrganisationId,
       });
-      const user = await directory.setScope(userId, scope);
+      await assertCanManageRole(auth, normalised);
+      await assertScopeEntitiesExist(normalised);
+      const nextScope: UserScope = {
+        role: normalised.role,
+        clientId: normalised.clientId ?? null,
+        brokerOrganisationId: normalised.brokerOrganisationId ?? null,
+      };
+      const user = await directory.setScope(userId, nextScope);
       await audit.append({
         actorUserId: auth.userId,
         actorRole: auth.role,
-        clientId: scope.clientId,
+        clientId: nextScope.role === "CLIENT" ? nextScope.clientId : null,
         entityType: "User",
         entityId: userId,
         action: "ACCESS_CHANGE",
@@ -152,7 +215,7 @@ export function createUserAdminService(
             clientId: existing.clientId,
             brokerOrganisationId: existing.brokerOrganisationId,
           },
-          after: scope,
+          after: nextScope,
         },
       });
       return user;

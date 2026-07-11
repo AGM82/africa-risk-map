@@ -6,6 +6,7 @@ import { AdminHeader } from "@/components/admin/admin-header";
 import { ClientSwitcher } from "@/components/admin/client-switcher";
 import { Button } from "@/components/ui/button";
 import {
+  cancelStructureSessionAction,
   confirmStructureSessionAction,
   refineStructureSessionAction,
   startStructureSessionAction,
@@ -140,6 +141,24 @@ export function StructureChatWorkspace({
     });
   }
 
+  function handleStartNewDraft() {
+    if (!session) return;
+    setError(null);
+    startTransition(async () => {
+      const result = await cancelStructureSessionAction({ sessionId: session.id });
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      router.refresh();
+    });
+  }
+
+  const showDescribeForm =
+    !session || session.status === "CONFIRMED" || session.status === "CANCELLED";
+  const showReview =
+    session !== null && session.status !== "CONFIRMED" && session.status !== "CANCELLED";
+
   return (
     <div className="bg-background text-foreground flex min-h-svh flex-col">
       <AdminHeader title="Structure Chat" role={authRole}>
@@ -195,7 +214,7 @@ export function StructureChatWorkspace({
           </section>
         ) : null}
 
-        {!session || session.status === "CONFIRMED" ? (
+        {!showDescribeForm ? null : (
           <section aria-labelledby="describe-heading" className="space-y-3 rounded-lg border p-4">
             <h2 id="describe-heading" className="text-base font-semibold tracking-tight">
               Describe the policy schedule
@@ -246,21 +265,32 @@ export function StructureChatWorkspace({
               </p>
             ) : null}
           </section>
-        ) : null}
+        )}
 
-        {session && session.status !== "CONFIRMED" ? (
+        {showReview ? (
           <>
             <section aria-labelledby="draft-heading" className="space-y-3 rounded-lg border p-4">
-              <div>
-                <h2 id="draft-heading" className="text-base font-semibold tracking-tight">
-                  Draft review ·{" "}
-                  {session.benefitScale === "FIXED_SUM" ? "Fixed Sum (GPA)" : "Earnings-Based"}
-                </h2>
-                <p className="text-muted-foreground text-xs">
-                  {session.currentDraft.paymentFrequency.replaceAll("_", " ")} ·{" "}
-                  {session.currentDraft.categories.length} categor
-                  {session.currentDraft.categories.length === 1 ? "y" : "ies"}
-                </p>
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <h2 id="draft-heading" className="text-base font-semibold tracking-tight">
+                    Draft review ·{" "}
+                    {session.benefitScale === "FIXED_SUM" ? "Fixed Sum (GPA)" : "Earnings-Based"}
+                  </h2>
+                  <p className="text-muted-foreground text-xs">
+                    {session.currentDraft.paymentFrequency.replaceAll("_", " ")} ·{" "}
+                    {session.currentDraft.categories.length} categor
+                    {session.currentDraft.categories.length === 1 ? "y" : "ies"}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={pending}
+                  onClick={handleStartNewDraft}
+                >
+                  Start new draft
+                </Button>
               </div>
 
               {session.uncertainFields.length > 0 ? (

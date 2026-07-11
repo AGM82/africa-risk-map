@@ -68,3 +68,17 @@ export async function confirmStructureSessionAction(input: {
     return { ok: false, error: toError(error) };
   }
 }
+
+export async function cancelStructureSessionAction(input: {
+  sessionId: string;
+}): Promise<ActionResult> {
+  try {
+    const auth = await requireAuthContext();
+    const { structureChat } = createFixtureAdminServices();
+    await structureChat.cancelSession(auth, input.sessionId);
+    revalidatePath("/structure-chat");
+    return { ok: true, sessionId: input.sessionId };
+  } catch (error) {
+    return { ok: false, error: toError(error) };
+  }
+}
