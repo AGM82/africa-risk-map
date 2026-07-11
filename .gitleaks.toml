@@ -1,0 +1,25 @@
+# gitleaks configuration for africa-risk-map.
+#
+# Extends gitleaks' full default ruleset (useDefault = true) and adds a single,
+# deliberately narrow allowlist for the documented build-time PLACEHOLDERS used
+# so `prisma generate` / `next build` have well-formed (not live) env values in
+# CI and the Dockerfile — see .github/workflows/ci.yml and Dockerfile.
+#
+# These are not secrets: no real credential is ever committed (see
+# .cursor/rules/10-security-popia.mdc and 90-project-context.mdc). The Clerk
+# secret-key placeholder `sk_test_placeholder` collides with gitleaks'
+# `stripe-access-token` rule (sk_(test|live)_ + >=10 chars), so it must be
+# allowlisted. The regex only matches values literally ending in `_placeholder`
+# — a real sk_/pk_/rk_ key never does — so this cannot hide a genuine secret.
+
+title = "africa-risk-map gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Documented non-secret build placeholders (never real credentials)"
+regexTarget = "match"
+regexes = [
+  '''(?i)(sk|pk|rk)_(test|live)_placeholder''',
+]

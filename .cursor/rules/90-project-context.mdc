@@ -34,10 +34,16 @@ The full product/architecture plan lives at `.cursor/plans/africa-risk-map-platf
 
 ## Canonical files (reference these — do not reinvent)
 
-- Component: `src/components/Greeting.tsx` (demo scaffold — replace in Foundations phase)
-- Utility: `src/lib/currency.ts`
-- Test: `src/components/Greeting.test.tsx`, `src/lib/currency.test.ts`
+- Prisma client singleton: `src/lib/db/prisma.ts`
+- RLS/tenant-scoping pattern: `src/lib/db/tenant-context.ts` (and the matching SQL in `prisma/migrations/0001_init/migration.sql`) — every later clientId-scoped table's migration copies this pattern
+- Auth context resolution: `src/lib/auth/session.ts`, `src/lib/auth/types.ts`
+- API error envelope: `src/lib/api/error-envelope.ts`
+- Route protection: `src/proxy.ts` (Next.js 16's `proxy` convention, formerly `middleware`)
+- shadcn/ui primitives: `src/components/ui/button.tsx`, `src/components/ui/card.tsx`
+- Utility: `src/lib/utils.ts`, `src/lib/currency.ts`
+- A11y test helper: `src/test/axe.ts`
 - CI: `.github/workflows/ci.yml`
+- Container build: `Dockerfile`
 - Agent entry: `AGENTS.md`
 - Full plan: `.cursor/plans/africa-risk-map-platform-plan.md`
 
@@ -47,7 +53,8 @@ Foundational tier (React/TypeScript/Tailwind/shadcn/Lucide/Vitest/axe-core) is u
 
 Deviations and additions from the template baseline (recorded here per the guardrails' own rule):
 
-- **Build/routing — Next.js App Router (React 19 / Next 15), not Vite.** A documented Tier-1/Tier-3 deviation: the app needs a single full-stack codebase (UI + route handlers + server actions) for PostGIS spatial queries, server-side multi-tenant scoping, scheduled feed/AI jobs, and the premium engine. Ships `output: 'standalone'` + a Dockerfile for host portability (Cloud Run primary target, Vercel fallback).
+- **Build/routing — Next.js App Router (React 19 / Next 16), not Vite.** A documented Tier-1/Tier-3 deviation: the app needs a single full-stack codebase (UI + route handlers + server actions) for PostGIS spatial queries, server-side multi-tenant scoping, scheduled feed/AI jobs, and the premium engine. Ships `output: 'standalone'` + a Dockerfile for host portability (Cloud Run primary target, Vercel fallback). Next 16 (the latest available at implementation time, superseding the originally-planned Next 15) renamed the `middleware.ts` file convention to `proxy.ts` — see `src/proxy.ts`.
+- **Test environment — Vitest + `happy-dom`, not `jsdom`.** A documented Tier-2 deviation from the template default: this build's `jsdom@29` dependency chain (`whatwg-url`/`html-encoding-sniffer` → `@exodus/bytes`) ships ESM-only files that Vitest's forked worker pool cannot `require()`, breaking `npm test` outright on this toolchain. `happy-dom` implements the same DOM surface React Testing Library and axe-core need without that broken chain.
 - **Database — PostgreSQL + PostGIS (+ H3/pgrouting) via Prisma, hosted on Neon** (pooled connection string for runtime, direct/unpooled for migrations — the known Prisma+serverless connection-exhaustion pitfall). Geometry columns modelled as `Unsupported("geometry(...)")` with raw `$queryRaw`/`$executeRaw` for spatial predicates — Prisma has no native geometry type. Postgres Row-Level Security keyed on `clientId` (and `brokerOrganisationId`) sits underneath Prisma's own scoping as defense-in-depth.
 - **Auth — Clerk** (template default, retained — not a deviation). Email OTP/magic-link only initially. Role (`INSURER_ADMIN`/`BROKER`/`CLIENT`) and scope (`clientId`/`brokerOrganisationId`) live as Clerk user metadata, carried into a session-token claim that Postgres RLS and Prisma scoping key on. No insured-person or financial data ever reaches Clerk.
 - **Mapping — MapLibre GL JS (via react-map-gl) + deck.gl**, self-hosted PMTiles/Protomaps basemap, PostGIS-backed vector tiles via Martin for live risk layers. Chosen over Mapbox (paid beyond a free tier) and over Google Maps (whose terms forbid permanently storing/caching POI data, which the geofencing engine requires).
@@ -72,7 +79,7 @@ Deviations and additions from the template baseline (recorded here per the guard
 
 - Personal-information categories this app touches: insured person / employee names and details (via `OrganisationLocation` headcounts and any future member-level detail), Clerk login identity (email, name) for platform users. No insured-person or financial data is ever sent to Clerk or to the Anthropic API.
 - Retention / anonymization: deletion requests against personal data are served by a tested anonymization code path that strips identifying fields while preserving the count/rate/history records the underwriting file depends on — hard-delete is not used, since it would destroy required underwriting evidence.
-- Backup / retention window: Neon point-in-time-recovery window and exact retention period — **not yet decided; must be settled before this project holds anything beyond local/free-tier dev data.**
+- Backup / retention window: Neon free-tier point-in-time-recovery window is 24 hours (Neon's free-plan default, not separately configurable) — sufficient for the current build/testing phase only. This must be revisited (Neon paid tier or Cloud SQL automated backups with a longer window, per client contractual/regulatory need) before the project holds anything beyond local/free-tier dev data.
 - Real client data or secrets must never enter this repository (`.env`, exports, seed data with real names) — seed scripts use the workbook structure with anonymized/placeholder values only.
 - Repo visibility: public (chosen deliberately — see below). Public visibility must never be treated as license to relax the no-real-data rule above; it is exactly why that rule is enforced instead.
 
@@ -82,7 +89,6 @@ Deviations and additions from the template baseline (recorded here per the guard
 - Invoicing & payment reconciliation — the platform computes premium/aggregate figures only; no debtor/arrears tracking or bank-receipt reconciliation.
 - Deeper SA insurance compliance beyond POPIA — no FAIS conduct-of-business features, binder-function workflow, or Policyholder Protection Rules tooling.
 - Certificates of insurance / Policy Schedule PDF generation — not built; the brand's document spec is reference material only, kept in case this changes later.
-- Do not treat `src/` demo code (`Greeting.tsx`, `currency.ts`) as production features — replace when the Foundations phase begins.
 - Do not commit `.env`, real client data, or credentials.
 - Do not weaken CI, hooks, or security scans without explicit instruction.
 

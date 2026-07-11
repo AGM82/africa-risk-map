@@ -10,10 +10,11 @@ alwaysApply: false
 
 ## Project overrides (Africa Risk Map)
 
-- **Build tool — Next.js App Router (React 19 / Next 15) replaces Vite.** The project needs a single full-stack codebase (UI + route handlers + server actions) for PostGIS spatial queries, server-side multi-tenant scoping, and the premium engine — a plain SPA build tool can't serve that. Full rationale and additions (Prisma/PostGIS, MapLibre/deck.gl, TanStack Table, Inngest, Sentry, Anthropic API) are recorded in `90-project-context.mdc`.
+- **Build tool — Next.js App Router (React 19 / Next 16) replaces Vite.** The project needs a single full-stack codebase (UI + route handlers + server actions) for PostGIS spatial queries, server-side multi-tenant scoping, and the premium engine — a plain SPA build tool can't serve that. Full rationale and additions (Prisma/PostGIS, MapLibre/deck.gl, TanStack Table, Inngest, Sentry, Anthropic API) are recorded in `90-project-context.mdc`. Vitest is kept for unit/component tests via its own `vitest.config.ts`, independent of the app's Next.js build.
 - **Tier 3 Routing — Next.js App Router** (one of the file's own listed override examples, now the actual chosen value for this project, not just an example).
 - **Tier 3 Auth — Clerk** (default retained, confirmed as the chosen value, not overridden).
 - **E2E testing — Playwright**, added alongside Vitest rather than replacing it (default retained).
+- **Vitest test environment — `happy-dom` replaces `jsdom`.** `jsdom@29`'s dependency chain breaks under this toolchain (see `90-project-context.mdc`); `happy-dom` is a drop-in for React Testing Library/axe-core purposes.
 - Global state (Zustand) and Animation (Framer Motion) defaults are unchanged/not yet needed — revisit when a concrete requirement appears.
 
 ## Tier 1 — Foundational (installed in every project from day one)
@@ -26,8 +27,8 @@ These are always present. There is no project where styling, accessible primitiv
 | Tailwind CSS v4 | Utility-first styling; enforces the 8-point grid and constrained palette from `31-design.mdc` | `tailwindcss` + `@tailwindcss/vite` plugin |
 | shadcn/ui | Accessible, unstyled component primitives (Radix UI underneath) | Add per-component via `npx shadcn@latest add <name>` — never hand-roll inputs, dialogs, or selects that shadcn provides |
 | Lucide React | Icon set; consistent with shadcn/ui | `lucide-react` |
-| Vite | Build tool and dev server | `@tailwindcss/vite` plugin; no `tailwind.config.*` needed for v4 |
-| Vitest + Testing Library | Unit and component tests | Coverage via `@vitest/coverage-v8`; threshold in `vite.config.ts` |
+| Next.js (App Router) | Build tool, dev server, and full-stack routing | `@tailwindcss/postcss` plugin (`postcss.config.mjs`); no `tailwind.config.*` needed for v4 |
+| Vitest + Testing Library | Unit and component tests | Coverage via `@vitest/coverage-v8`; threshold in `vitest.config.ts`, kept separate from the app's Next.js build |
 | axe-core | Automated accessibility assertions in component tests | Use the `expectNoA11yViolations()` helper in `src/test/axe.ts` — calls axe-core directly rather than a Jest/Vitest wrapper package |
 
 ### Tailwind conventions
@@ -41,7 +42,7 @@ These are always present. There is no project where styling, accessible primitiv
 
 - Functional components with typed props. No `any` — model real types. Co-locate types with the component or in a `types.ts`.
 - Compose from shadcn/ui primitives (`@/components/ui/*`). Extend them before building from scratch.
-- Reference component: `src/components/Greeting.tsx` — shows Tailwind + Lucide + shadcn `Button` in a minimal example.
+- Reference components: `src/components/ui/button.tsx`, `src/components/ui/card.tsx` — shadcn primitives composed in `src/app/page.tsx`.
 
 ---
 

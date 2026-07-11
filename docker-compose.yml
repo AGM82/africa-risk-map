@@ -1,0 +1,36 @@
+# Local development database only — PostgreSQL + PostGIS.
+#
+# Not a production artifact: production uses Neon (build/testing phase) or
+# Cloud SQL (Lombard-owned GCP), per .cursor/rules/90-project-context.mdc.
+# Real secrets never live here — these are throwaway local credentials.
+#
+# Usage:
+#   docker compose up -d db
+#   # then, with .env pointing DATABASE_URL/DIRECT_URL at localhost:5432:
+#   npx prisma migrate deploy
+#
+# The app runs via `npm run dev` (Next.js) against this database; there is no
+# app service here on purpose, so the dev server keeps hot-reload and does not
+# rebuild a container on every change. The multi-stage Dockerfile is used for
+# container/Cloud Run builds instead.
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: africa-risk-map-db
+    environment:
+      POSTGRES_USER: africa_risk_map
+      POSTGRES_PASSWORD: africa_risk_map
+      POSTGRES_DB: africa_risk_map
+    ports:
+      - "5432:5432"
+    volumes:
+      - africa_risk_map_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U africa_risk_map -d africa_risk_map"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  africa_risk_map_pgdata:
