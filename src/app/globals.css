@@ -148,3 +148,17 @@
   --risk-very-high: oklch(0.55 0.22 25);
   --risk-extreme: oklch(0.4 0.12 25);
 }
+
+@media print {
+  .print\:hidden {
+    display: none !important;
+  }
+
+  main {
+    background: white !important;
+  }
+
+  header {
+    border-bottom: 1px solid #ddd !important;
+  }
+}

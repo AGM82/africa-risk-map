@@ -3,9 +3,11 @@ import { UserButton } from "@clerk/nextjs";
 import {
   Building2,
   Calculator,
+  LayoutDashboard,
   MapPinned,
   MessagesSquare,
   Scale,
+  ScrollText,
   ShieldCheck,
   Users,
   Warehouse,
@@ -45,6 +47,44 @@ export default async function HomePage() {
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-muted-foreground flex items-center gap-2 text-sm font-medium">
+                <LayoutDashboard className="size-4" /> Dashboard
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-muted-foreground text-sm">
+              <Link href="/dashboard" className="text-foreground font-medium underline">
+                Client dashboard
+              </Link>{" "}
+              — covered lives, live book totals, and premium/aggregate trends.
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-muted-foreground flex items-center gap-2 text-sm font-medium">
+                <ScrollText className="size-4" /> Ledger &amp; audit
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-muted-foreground text-sm">
+              <Link href="/ledger" className="text-foreground font-medium underline">
+                Endorsement ledger
+              </Link>
+              {" · "}
+              <Link href="/audit" className="text-foreground font-medium underline">
+                Audit log
+              </Link>
+              {authContext.role === "INSURER_ADMIN" ? (
+                <>
+                  {" · "}
+                  <Link href="/rollup" className="text-foreground font-medium underline">
+                    Cross-client rollup
+                  </Link>
+                </>
+              ) : null}{" "}
+              — history, CSV export, and Insurer rollup.
+            </CardContent>
+          </Card>
           <Card>
             <CardHeader>
               <CardTitle className="text-muted-foreground flex items-center gap-2 text-sm font-medium">
@@ -158,8 +198,8 @@ export default async function HomePage() {
         </div>
 
         <p className="text-muted-foreground text-xs">
-          This is the Foundations scaffold. Role-specific dashboards land in the
-          dashboards-reporting to-do.{" "}
+          Role-scoped dashboards, ledger, audit, and Insurer rollup are available from the cards
+          above.{" "}
           <Link href="/sign-in" className="underline">
             Switch account
           </Link>

@@ -100,7 +100,8 @@ Projected lives by Low/Med / High / Very High vs `RiskMixPolicy` Â± tolerance â€
 
 ## Out of scope
 
-- Endorsement reverse UI / TanStack history (dashboards-reporting)
 - Prisma runtime adapters (fixture-only)
 - Playwright E2E
 - Annual adjustment _settlement_ UI (estimate vs actual deposit ledger)
+
+Endorsement history / reverse: see [`docs/dashboards-reporting.md`](dashboards-reporting.md).

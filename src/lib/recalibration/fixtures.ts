@@ -22,8 +22,8 @@ export const RECALIBRATION_FIXTURES: RecalibrationSeed = {
   ],
 };
 
-/** Small baselines matching ORG_LOCATION_FIXTURES totals (42 Essential / 18 Premium). */
+/** Small baselines matching ORG_LOCATION_FIXTURES endorsement totals (47 Essential / 16 Premium). */
 export const BALANCED_TEST_BASELINES = {
-  ESSENTIAL: 42,
-  PREMIUM: 18,
+  ESSENTIAL: 47,
+  PREMIUM: 16,
 } as const;

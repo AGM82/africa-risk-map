@@ -16,6 +16,7 @@ import { createDefaultStructureDrafter } from "@/lib/structure-chat/anthropic-dr
 import { createFixtureStructureChatRepository } from "@/lib/structure-chat/fixture-repository";
 import { STRUCTURE_CHAT_FIXTURES } from "@/lib/structure-chat/fixtures";
 import { createStructureChatService } from "@/lib/structure-chat/service";
+import { createReportingService } from "@/lib/reporting/service";
 import { createFixtureTerritoryRepository } from "@/lib/territory/fixture-repository";
 import { TERRITORY_FIXTURES } from "@/lib/territory/fixtures";
 import { createFixtureUserDirectory } from "@/lib/user-admin/directory";
@@ -62,6 +63,15 @@ function buildFixtureAdminServices() {
     clientBroker,
     audit,
   );
+  const reporting = createReportingService(
+    orgLocationRepo,
+    territoryRepo,
+    policy,
+    premium,
+    recalibration,
+    clientBroker,
+    audit,
+  );
   const structureChat = createStructureChatService(
     createFixtureStructureChatRepository(STRUCTURE_CHAT_FIXTURES),
     clientBroker,
@@ -81,6 +91,7 @@ function buildFixtureAdminServices() {
     recalibration,
     policy,
     premium,
+    reporting,
     structureChat,
     userAdmin,
   };

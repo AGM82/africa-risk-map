@@ -107,8 +107,8 @@ describe("premium calculator service", () => {
     const result = await premium.getBook(insurer, "client-graa");
     expect(result.unsupported).toBe(false);
     if (result.unsupported) return;
-    expect(result.book.totalLives).toBe(60);
-    expect(result.book.totalMonthlyPremium).toBeCloseTo(42 * 24.06 + 18 * 77.44, 2);
+    expect(result.book.totalLives).toBe(63);
+    expect(result.book.totalMonthlyPremium).toBeCloseTo(47 * 24.06 + 16 * 77.44, 2);
   });
 
   it("returns African Parks book from declared wage roll × rate%", async () => {
@@ -154,7 +154,7 @@ describe("premium calculator service", () => {
     await recalibration.lockBatch(insurer, "recal-test-open");
 
     const before = await orgLocationRepo.getLocationById("loc-demo-zaf");
-    expect(before?.headcount).toBe(42);
+    expect(before?.headcount).toBe(47);
 
     const result = await premium.confirmWhatIf(insurer, {
       clientId: "client-graa",
@@ -168,7 +168,7 @@ describe("premium calculator service", () => {
     expect(result.endorsement.kind).toBe("ADD");
     expect(result.endorsement.delta).toBe(5);
     expect(result.location.headcount).toBe(5);
-    expect(result.book.totalLives).toBe(65);
+    expect(result.book.totalLives).toBe(68);
 
     const entries = await audit.list();
     expect(entries.some((e) => e.entityType === "Endorsement" && e.action === "CONFIRM")).toBe(
