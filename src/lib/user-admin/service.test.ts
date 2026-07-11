@@ -6,7 +6,11 @@ import { CLIENT_BROKER_FIXTURES } from "@/lib/client/fixtures";
 import { createClientBrokerService } from "@/lib/client/service";
 import { createFixtureUserDirectory, resetUserDirectoryIds } from "@/lib/user-admin/directory";
 import { MANAGED_USER_FIXTURES } from "@/lib/user-admin/fixtures";
-import { createUserAdminService, UserAdminAccessError } from "@/lib/user-admin/service";
+import {
+  createUserAdminService,
+  UserAdminAccessError,
+  UserAdminValidationError,
+} from "@/lib/user-admin/service";
 
 const insurer: AuthContext = {
   userId: "user-insurer",
@@ -101,5 +105,40 @@ describe("user-admin service", () => {
     expect(updated.active).toBe(false);
     const entries = await audit.list();
     expect(entries[0]?.action).toBe("ACCESS_CHANGE");
+  });
+
+  it("allows insurer to invite broker and set scope", async () => {
+    const { userAdmin, audit } = buildService();
+    const invited = await userAdmin.inviteUser(insurer, {
+      email: "broker2@example.com",
+      role: "BROKER",
+      brokerOrganisationId: "broker-lombard",
+    });
+    expect(invited.role).toBe("BROKER");
+    const scoped = await userAdmin.setUserScope(insurer, "user-broker", {
+      role: "BROKER",
+      clientId: null,
+      brokerOrganisationId: "broker-partner",
+    });
+    expect(scoped.brokerOrganisationId).toBe("broker-partner");
+    expect((await audit.list()).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("validates required scope fields on insurer invite", async () => {
+    const { userAdmin } = buildService();
+    await expect(
+      userAdmin.inviteUser(insurer, {
+        email: "bad@example.com",
+        role: "BROKER",
+        brokerOrganisationId: null,
+      }),
+    ).rejects.toBeInstanceOf(UserAdminValidationError);
+  });
+
+  it("reactivates a deactivated user", async () => {
+    const { userAdmin } = buildService();
+    await userAdmin.setUserActive(insurer, "user-client-graa", false);
+    const active = await userAdmin.setUserActive(insurer, "user-client-graa", true);
+    expect(active.active).toBe(true);
   });
 });

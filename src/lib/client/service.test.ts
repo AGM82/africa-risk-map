@@ -96,4 +96,30 @@ describe("client-broker service", () => {
     expect(entries[0]?.action).toBe("ACCESS_CHANGE");
     expect(entries[0]?.entityType).toBe("ClientBrokerAssignment");
   });
+
+  it("updates a client and creates broker organisations", async () => {
+    const { service, audit } = buildService();
+    const updated = await service.updateClient(insurer, "client-graa", { name: "GRAA updated" });
+    expect(updated.name).toBe("GRAA updated");
+    const broker = await service.createBrokerOrganisation(insurer, {
+      name: "Third Broker",
+      code: "third",
+    });
+    expect(broker.code).toBe("third");
+    expect((await audit.list()).some((e) => e.entityType === "BrokerOrganisation")).toBe(true);
+  });
+
+  it("returns current assignment when re-assigning the same broker", async () => {
+    const { service } = buildService();
+    const first = await service.assignBroker(insurer, "client-graa", "broker-lombard");
+    const second = await service.assignBroker(insurer, "client-graa", "broker-lombard");
+    expect(second.id).toBe(first.id);
+  });
+
+  it("lists clients with brokers for accessible roles", async () => {
+    const { service } = buildService();
+    const rows = await service.listClientsWithBrokers(broker);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.broker?.id).toBe("broker-lombard");
+  });
 });
