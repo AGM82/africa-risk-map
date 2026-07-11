@@ -4,11 +4,12 @@
 // establishes:
 //   - PostgreSQL + PostGIS datasource, pooled (runtime) vs direct (migrations) URLs
 //   - The AuditLogEntry model, which every later to-do's mutations write to
+//   - Client / BrokerOrganisation / ClientBrokerAssignment (multi-tenant backbone)
 //   - Shared/global Territory + TerritoryRiskHistory (risk register)
 //   - Shared/global spatial reference layers (AdminBoundary, Airport,
 //     HealthFacility, Place) + SpatialDatasetRefresh provenance
-//   - The Row-Level Security pattern (see prisma/migrations/0001_init/migration.sql)
-//     that every later clientId-scoped table must replicate
+//   - The Row-Level Security pattern (see prisma/migrations/0001_init/migration.sql
+//     and 0004_client_broker) that every later clientId-scoped table must replicate
 //
 // Geometry columns use Unsupported("geometry(...)") — see
 // docs/prisma-postgis-geometry.md and src/lib/db/spatial.ts.
@@ -61,6 +62,12 @@ enum BenefitOptionsAvailable {
   DECLINE
 }
 
+/// Lifecycle status of an insured Client organisation.
+enum ClientStatus {
+  ACTIVE
+  INACTIVE
+}
+
 /// Immutable, append-only audit trail for every state-changing action across the
 /// platform (territory edits, endorsements, policy confirmations, user-admin
 /// access changes, AI-drafted-record confirmations, etc.). Never updated or
@@ -84,6 +91,65 @@ model AuditLogEntry {
   @@index([entityType, entityId])
   @@index([createdAt])
   @@map("audit_log_entries")
+}
+
+// ---------------------------------------------------------------------------
+// Multi-tenant backbone: Client, BrokerOrganisation, ClientBrokerAssignment.
+// Client is the tenant root — AuthContext.clientId is a Client.id. RLS is
+// keyed on app.current_client_id / app.current_broker_org_id (see the pattern
+// in prisma/migrations/0001_init/migration.sql and 0004_client_broker).
+// ---------------------------------------------------------------------------
+
+/// An insured association/organisation (e.g. GRAA). Tenant root: every
+/// client-scoped table's clientId points here. Never holds insured-person or
+/// financial data directly — those hang off its Policies/Organisations.
+model Client {
+  id          String                   @id @default(cuid())
+  /// Human-readable name (anonymised placeholder only in seed/fixtures).
+  name        String
+  /// Stable URL-safe slug used in routes and logs (e.g. "graa").
+  code        String                   @unique
+  status      ClientStatus             @default(ACTIVE)
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+  assignments ClientBrokerAssignment[]
+
+  @@index([status])
+  @@map("clients")
+}
+
+/// A brokerage servicing one or more Clients (e.g. Lombard's own brokerage or
+/// a third-party broker). Shared admin entity — no clientId, Insurer-managed.
+/// BROKER users belong to a BrokerOrganisation via Clerk metadata.
+model BrokerOrganisation {
+  id          String                   @id @default(cuid())
+  name        String
+  code        String                   @unique
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+  assignments ClientBrokerAssignment[]
+
+  @@map("broker_organisations")
+}
+
+/// Effective-dated link between a Client and the BrokerOrganisation servicing
+/// it. A broker change at renewal closes the old row (effectiveTo set) and
+/// opens a new one, so history is never lost. effectiveTo IS NULL = current.
+model ClientBrokerAssignment {
+  id                   String             @id @default(cuid())
+  clientId             String
+  client               Client             @relation(fields: [clientId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  brokerOrganisationId String
+  brokerOrganisation   BrokerOrganisation @relation(fields: [brokerOrganisationId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  effectiveFrom        DateTime           @default(now())
+  effectiveTo          DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@index([clientId])
+  @@index([brokerOrganisationId])
+  @@index([effectiveTo])
+  @@map("client_broker_assignments")
 }
 
 // ---------------------------------------------------------------------------

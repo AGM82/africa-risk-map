@@ -54,3 +54,7 @@ NEXT_PUBLIC_MAP_STYLE_URL="https://basemaps.cartocdn.com/gl/dark-matter-gl-style
    respective to-dos are implemented — leave blank until then.
 5. `NEXT_PUBLIC_MAP_STYLE_URL` is optional; omit it to use the documented
    dark basemap default for local Risk Register map development.
+6. For live user invites (`createClerkUserDirectory`), customize the Clerk
+   session token with `{ "metadata": "{{user.public_metadata}}" }` so role and
+   scope reach `getAuthContext()` — see `docs/user-admin.md`. Until then the
+   `/clients` and `/admin/users` surfaces use fixture directories.
