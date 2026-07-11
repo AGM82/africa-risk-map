@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { RiskLegend } from "@/components/map/risk-legend";
+import { TerritoryFiltersPanel } from "@/components/map/territory-filters-panel";
 import { TerritoryList } from "@/components/map/territory-list";
 import { TerritoryTable } from "@/components/map/territory-table";
 import { TERRITORY_FIXTURES } from "@/lib/territory/fixtures";
+import { DEFAULT_TERRITORY_FILTERS } from "@/lib/territory/filters";
 import { expectNoA11yViolations } from "@/test/axe";
 
 describe("map UI components", () => {
@@ -26,6 +28,36 @@ describe("map UI components", () => {
     );
     expect(screen.getByText(/Nigeria/i)).toBeInTheDocument();
     expect(screen.queryByText(/South Africa/i)).not.toBeInTheDocument();
+    await expectNoA11yViolations(container);
+  });
+
+  it("shows a filter-specific empty state", () => {
+    render(
+      <TerritoryList
+        territories={[]}
+        selectedId={null}
+        query=""
+        filtersActive
+        onQueryChange={() => undefined}
+        onSelect={() => undefined}
+      />,
+    );
+    expect(screen.getByText(/No territories match the current filters/i)).toBeInTheDocument();
+  });
+
+  it("renders filter controls and narrows GRAA presence", async () => {
+    const { container } = render(
+      <TerritoryFiltersPanel
+        filters={{ ...DEFAULT_TERRITORY_FILTERS, graaPresence: "yes" }}
+        totalCount={TERRITORY_FIXTURES.length}
+        visibleCount={3}
+        onChange={() => undefined}
+        onClear={() => undefined}
+      />,
+    );
+    expect(screen.getByText(/Showing 3 of 4 territories/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/GRAA members only/i)).toBeChecked();
+    expect(screen.getByRole("button", { name: /Clear filters/i })).toBeInTheDocument();
     await expectNoA11yViolations(container);
   });
 

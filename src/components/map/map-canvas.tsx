@@ -24,12 +24,19 @@ type PoiToggles = Readonly<Record<PoiKey, boolean>>;
 
 type MapCanvasProps = Readonly<{
   territories: readonly TerritoryRecord[];
+  filteredIds: ReadonlySet<string>;
   selectedId: string | null;
   poi: PoiToggles;
   onSelectTerritory: (id: string) => void;
 }>;
 
-export function MapCanvas({ territories, selectedId, poi, onSelectTerritory }: MapCanvasProps) {
+export function MapCanvas({
+  territories,
+  filteredIds,
+  selectedId,
+  poi,
+  onSelectTerritory,
+}: MapCanvasProps) {
   const choropleth = useMemo(() => {
     const byId = new globalThis.Map(territories.map((t) => [t.id, t] as const));
     return {
@@ -37,6 +44,7 @@ export function MapCanvas({ territories, selectedId, poi, onSelectTerritory }: M
       features: TERRITORY_GEOJSON.features.map((feature) => {
         const id = String(feature.properties.territoryId);
         const terr = byId.get(id);
+        const matched = filteredIds.has(id);
         return {
           type: "Feature" as const,
           properties: {
@@ -44,12 +52,13 @@ export function MapCanvas({ territories, selectedId, poi, onSelectTerritory }: M
             label: String(feature.properties.label),
             riskCategory: terr?.riskCategory ?? String(feature.properties.riskCategory),
             selected: id === selectedId,
+            matched,
           },
           geometry: feature.geometry,
         };
       }),
     };
-  }, [territories, selectedId]);
+  }, [territories, filteredIds, selectedId]);
 
   const poiData = useMemo(() => {
     const allowed = new Set<PoiKey>();
@@ -75,10 +84,15 @@ export function MapCanvas({ territories, selectedId, poi, onSelectTerritory }: M
 
   function handleClick(event: MapLayerMouseEvent) {
     const feature = event.features?.[0];
-    const entry = feature?.properties
-      ? Object.entries(feature.properties).find(([key]) => key === "territoryId")
-      : undefined;
-    const rawId: unknown = entry?.[1];
+    const rawProps = feature?.properties;
+    if (!rawProps) {
+      return;
+    }
+    const props = rawProps as Record<string, unknown>;
+    if (props.matched !== true) {
+      return;
+    }
+    const rawId = props.territoryId;
     if (typeof rawId === "string") {
       onSelectTerritory(rawId);
     }
@@ -98,8 +112,13 @@ export function MapCanvas({ territories, selectedId, poi, onSelectTerritory }: M
           id="territory-fill"
           type="fill"
           paint={{
-            "fill-color": riskCategoryMatchExpression() as never,
-            "fill-opacity": 0.65,
+            "fill-color": [
+              "case",
+              ["boolean", ["get", "matched"], false],
+              riskCategoryMatchExpression(),
+              "#3a3a3a",
+            ] as never,
+            "fill-opacity": ["case", ["boolean", ["get", "matched"], false], 0.65, 0.12] as never,
           }}
         />
         <Layer

@@ -1,14 +1,21 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { RiskLegend } from "@/components/map/risk-legend";
 import { TerritoryDrawer } from "@/components/map/territory-drawer";
+import { TerritoryFiltersPanel } from "@/components/map/territory-filters-panel";
 import { TerritoryList } from "@/components/map/territory-list";
 import { TerritoryTable } from "@/components/map/territory-table";
+import {
+  applyTerritoryFilters,
+  clearTerritoryFilters,
+  DEFAULT_TERRITORY_FILTERS,
+  hasActiveFilters,
+} from "@/lib/territory/filters";
 import { createFixtureTerritoryRepository } from "@/lib/territory/fixture-repository";
 import { TERRITORY_FIXTURES } from "@/lib/territory/fixtures";
 import { createTerritoryService } from "@/lib/territory/service";
@@ -42,6 +49,7 @@ export function RiskMapWorkspace({ auth }: RiskMapWorkspaceProps) {
   const [territories, setTerritories] = useState<TerritoryRecord[]>(() => [...TERRITORY_FIXTURES]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [filters, setFilters] = useState(DEFAULT_TERRITORY_FILTERS);
   const [view, setView] = useState<"map" | "table">("map");
   const [poi, setPoi] = useState({
     airports: true,
@@ -50,8 +58,24 @@ export function RiskMapWorkspace({ auth }: RiskMapWorkspaceProps) {
   });
   const [, startTransition] = useTransition();
 
+  const filteredTerritories = useMemo(
+    () => applyTerritoryFilters(territories, filters),
+    [territories, filters],
+  );
+  const filteredIds = useMemo(
+    () => new Set(filteredTerritories.map((t) => t.id)),
+    [filteredTerritories],
+  );
+  const filtersActive = hasActiveFilters(filters);
+
   const selected = territories.find((t) => t.id === selectedId) ?? null;
   const canEdit = auth.role === "INSURER_ADMIN";
+
+  useEffect(() => {
+    if (selectedId !== null && !filteredIds.has(selectedId)) {
+      setSelectedId(null);
+    }
+  }, [filteredIds, selectedId]);
 
   async function refresh() {
     const list = await service.listTerritories();
@@ -104,11 +128,19 @@ export function RiskMapWorkspace({ auth }: RiskMapWorkspaceProps) {
       </header>
 
       <div className="flex min-h-0 flex-1">
-        <aside className="border-border bg-card flex w-80 shrink-0 flex-col gap-4 border-r p-4">
+        <aside className="border-border bg-card flex w-80 shrink-0 flex-col gap-4 overflow-y-auto border-r p-4">
+          <TerritoryFiltersPanel
+            filters={filters}
+            totalCount={territories.length}
+            visibleCount={filteredTerritories.length}
+            onChange={setFilters}
+            onClear={() => setFilters(clearTerritoryFilters())}
+          />
           <TerritoryList
-            territories={territories}
+            territories={filteredTerritories}
             selectedId={selectedId}
             query={query}
+            filtersActive={filtersActive}
             onQueryChange={setQuery}
             onSelect={(id) => {
               startTransition(() => setSelectedId(id));
@@ -156,6 +188,7 @@ export function RiskMapWorkspace({ auth }: RiskMapWorkspaceProps) {
               <div className="absolute inset-0 bg-[#0b1220]">
                 <MapCanvas
                   territories={territories}
+                  filteredIds={filteredIds}
                   selectedId={selectedId}
                   poi={poi}
                   onSelectTerritory={setSelectedId}
@@ -166,7 +199,7 @@ export function RiskMapWorkspace({ auth }: RiskMapWorkspaceProps) {
           ) : (
             <TerritoryTable
               className="h-full p-4"
-              territories={territories}
+              territories={filteredTerritories}
               selectedId={selectedId}
               onSelect={setSelectedId}
             />

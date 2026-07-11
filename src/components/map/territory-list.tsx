@@ -9,6 +9,7 @@ type TerritoryListProps = Readonly<{
   territories: readonly TerritoryRecord[];
   selectedId: string | null;
   query: string;
+  filtersActive?: boolean;
   onQueryChange: (value: string) => void;
   onSelect: (id: string) => void;
 }>;
@@ -17,6 +18,7 @@ export function TerritoryList({
   territories,
   selectedId,
   query,
+  filtersActive = false,
   onQueryChange,
   onSelect,
 }: TerritoryListProps) {
@@ -70,7 +72,11 @@ export function TerritoryList({
         })}
         {filtered.length === 0 ? (
           <li className="text-muted-foreground px-2 py-4 text-sm">
-            No territories match “{query}”.
+            {query.trim() !== ""
+              ? `No territories match “${query}”.`
+              : filtersActive
+                ? "No territories match the current filters."
+                : "No territories to show."}
           </li>
         ) : null}
       </ul>

@@ -3,7 +3,7 @@
 Shared, Insurer-maintained Territory risk data plus a MapLibre map shell.
 Live Neon seeding and PostGIS ADM1 joins land when a database is provisioned.
 
-Canonical domain code: `src/lib/territory/`.  
+Canonical domain code: `src/lib/territory/` (including `filters.ts` for list/map filter logic).  
 Canonical UI: `src/components/map/` + route `/map`.  
 Schema: `Territory` / `TerritoryRiskHistory` in `prisma/schema.prisma`,
 migration `0003_territory`.
@@ -41,7 +41,8 @@ Today the repository is the in-memory fixture adapter
 
 ## Map UI (`/map`)
 
-- Left panel: searchable territory list + POI layer toggles
+- Left panel: multi-facet filters (risk tier, GRAA presence, benefit options, evacuation feasibility), searchable territory list, POI layer toggles
+- Filters apply to list, table, and map (non-matching territories dim on the choropleth)
 - Centre: MapLibre canvas (dark basemap) shaded by risk category from fixture GeoJSON
 - Click → non-modal detail drawer
 - Legend (colour + label)
@@ -59,7 +60,6 @@ exception (see platform plan). Tokens: `--risk-low` … `--risk-extreme` in
 
 ## Out of scope here
 
-- Rich filters → `risk-register-map-filters`
 - Client org/location pins → Phase 3
 - Live PMTiles/R2 / Martin tiles → when hosting is wired
 - H3 / custom zones / isochrones → Phase 8

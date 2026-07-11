@@ -18,6 +18,21 @@ export const RISK_CATEGORY_TAILWIND: Record<RiskCategoryCode, string> = {
   Extreme: "bg-risk-extreme",
 };
 
+export function getRiskCategoryHex(code: RiskCategoryCode): string {
+  switch (code) {
+    case "Low":
+      return RISK_CATEGORY_HEX.Low;
+    case "Medium":
+      return RISK_CATEGORY_HEX.Medium;
+    case "High":
+      return RISK_CATEGORY_HEX.High;
+    case "VeryHigh":
+      return RISK_CATEGORY_HEX.VeryHigh;
+    case "Extreme":
+      return RISK_CATEGORY_HEX.Extreme;
+  }
+}
+
 export function riskCategoryMatchExpression(): unknown[] {
   return [
     "match",
