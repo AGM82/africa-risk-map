@@ -123,7 +123,18 @@ export function createStructureChatService(
       clientId?: string | null,
     ): Promise<readonly StructureSessionRecord[]> {
       assertCanUse(auth);
-      if (clientId) await assertClientAccess(auth, clientBroker, clientId);
+      if (auth.role === "BROKER") {
+        if (!clientId) {
+          throw new StructureChatAccessError("Broker must list sessions for a specific client");
+        }
+        await assertClientAccess(auth, clientBroker, clientId);
+        return repo.listSessions(clientId);
+      }
+      if (clientId !== undefined && clientId !== null) {
+        await assertClientAccess(auth, clientBroker, clientId);
+        return repo.listSessions(clientId);
+      }
+      // Insurer: null lists template-only sessions; undefined lists all.
       return repo.listSessions(clientId);
     },
 
@@ -243,11 +254,16 @@ export function createStructureChatService(
       }
       await assertClientAccess(auth, clientBroker, session.clientId);
 
+      const trimmed = message.trim();
+      if (trimmed.length === 0) {
+        throw new StructureChatAccessError("Refine message cannot be empty");
+      }
+
       const drafted = await drafter.draft({
         sourceText: session.sourceText,
         benefitScaleHint: session.benefitScale,
         sourceDraft: session.currentDraft,
-        refineMessage: message.trim(),
+        refineMessage: trimmed,
       });
       const validation = validateStructureDraft(drafted.draft);
       if (!validation.ok || !validation.draft) {
@@ -267,7 +283,7 @@ export function createStructureChatService(
             actorUserId: auth.userId,
             kind: "ai",
             draft: validation.draft,
-            message: message.trim(),
+            message: trimmed,
           },
         ],
         updatedAt: new Date(),
@@ -280,7 +296,7 @@ export function createStructureChatService(
         entityType: "PolicyStructureSession",
         entityId: saved.id,
         action: "UPDATE",
-        diff: { kind: "refine", message: message.trim() },
+        diff: { kind: "refine", message: trimmed },
       });
       return saved;
     },
@@ -336,6 +352,9 @@ export function createStructureChatService(
       if (session.status === "CONFIRMED") {
         throw new StructureChatAccessError("Session already confirmed");
       }
+      if (session.status === "CANCELLED") {
+        throw new StructureChatAccessError("Cannot confirm a cancelled session");
+      }
       await assertClientAccess(auth, clientBroker, session.clientId);
 
       if (parsed.target === "POLICY" || parsed.target === "BOTH") {
@@ -364,70 +383,111 @@ export function createStructureChatService(
       let confirmedPolicyId: string | null = null;
       let confirmedTemplateId: string | null = null;
 
-      if (parsed.target === "TEMPLATE" || parsed.target === "BOTH") {
-        const template = await repo.createTemplate({
-          name: parsed.templateName!.trim(),
-          description: parsed.templateDescription ?? null,
-          benefitScale: draft.benefitScale,
-          structureJson: draft,
-          createdByUserId: auth.userId,
+      try {
+        if (parsed.target === "TEMPLATE" || parsed.target === "BOTH") {
+          const template = await repo.createTemplate({
+            name: parsed.templateName!.trim(),
+            description: parsed.templateDescription ?? null,
+            benefitScale: draft.benefitScale,
+            structureJson: draft,
+            createdByUserId: auth.userId,
+          });
+          confirmedTemplateId = template.id;
+        }
+
+        if ((parsed.target === "POLICY" || parsed.target === "BOTH") && session.clientId) {
+          const terms = await policy.createPaymentTerms(auth, {
+            clientId: session.clientId,
+            frequency: draft.paymentFrequency,
+            aggregateIsClientFund: draft.aggregateIsClientFund,
+            ...(draft.depositMinPremium !== undefined
+              ? { depositMinPremium: draft.depositMinPremium }
+              : {}),
+            ...(draft.adjustmentCadenceMonths !== undefined
+              ? { adjustmentCadenceMonths: draft.adjustmentCadenceMonths }
+              : {}),
+          });
+          const schedule = await policy.createPolicy(auth, {
+            clientId: session.clientId,
+            policyYear: draft.policyYear ?? session.policyYear ?? "2025-2026",
+            inceptionDate: new Date(draft.inceptionDate ?? "2025-12-01T00:00:00.000Z"),
+            expiryDate: new Date(draft.expiryDate ?? "2026-11-30T00:00:00.000Z"),
+            benefitScale: draft.benefitScale,
+            paymentTermsId: terms.id,
+            status: "QUOTED",
+            categories: toCategoryInputs(draft),
+          });
+          confirmedPolicyId = schedule.policy.id;
+        }
+
+        const confirmed = await repo.markConfirmed(sessionId, {
+          target: parsed.target,
+          confirmedPolicyId,
+          confirmedTemplateId,
+          confirmedByUserId: auth.userId,
+          confirmedAt: new Date(),
         });
-        confirmedTemplateId = template.id;
+        if (!confirmed) throw new StructureSessionNotFoundError(sessionId);
+
+        await audit.append({
+          actorUserId: auth.userId,
+          actorRole: auth.role,
+          clientId: confirmed.clientId,
+          entityType: "PolicyStructureSession",
+          entityId: confirmed.id,
+          action: "CONFIRM",
+          diff: {
+            before: { status: session.status },
+            after: {
+              status: confirmed.status,
+              confirmTarget: confirmed.confirmTarget,
+              confirmedPolicyId,
+              confirmedTemplateId,
+            },
+          },
+        });
+
+        return confirmed;
+      } catch (error) {
+        // Best-effort compensating delete for fixture path (no DB transaction yet).
+        if (confirmedTemplateId) {
+          await repo.deleteTemplate(confirmedTemplateId).catch(() => undefined);
+        }
+        throw error;
       }
+    },
 
-      if ((parsed.target === "POLICY" || parsed.target === "BOTH") && session.clientId) {
-        const terms = await policy.createPaymentTerms(auth, {
-          clientId: session.clientId,
-          frequency: draft.paymentFrequency,
-          aggregateIsClientFund: draft.aggregateIsClientFund,
-          ...(draft.depositMinPremium !== undefined
-            ? { depositMinPremium: draft.depositMinPremium }
-            : {}),
-          ...(draft.adjustmentCadenceMonths !== undefined
-            ? { adjustmentCadenceMonths: draft.adjustmentCadenceMonths }
-            : {}),
-        });
-        const schedule = await policy.createPolicy(auth, {
-          clientId: session.clientId,
-          policyYear: draft.policyYear ?? session.policyYear ?? "2025-2026",
-          inceptionDate: new Date(draft.inceptionDate ?? "2025-12-01T00:00:00.000Z"),
-          expiryDate: new Date(draft.expiryDate ?? "2026-11-30T00:00:00.000Z"),
-          benefitScale: draft.benefitScale,
-          paymentTermsId: terms.id,
-          status: "QUOTED",
-          categories: toCategoryInputs(draft),
-        });
-        confirmedPolicyId = schedule.policy.id;
+    async cancelSession(auth: AuthContext, sessionId: string): Promise<StructureSessionRecord> {
+      assertCanUse(auth);
+      const session = await repo.getSession(sessionId);
+      if (!session) throw new StructureSessionNotFoundError(sessionId);
+      if (session.status === "CONFIRMED") {
+        throw new StructureChatAccessError("Cannot cancel a confirmed session");
       }
-
-      const confirmed = await repo.markConfirmed(sessionId, {
-        target: parsed.target,
-        confirmedPolicyId,
-        confirmedTemplateId,
-        confirmedByUserId: auth.userId,
-        confirmedAt: new Date(),
-      });
-      if (!confirmed) throw new StructureSessionNotFoundError(sessionId);
-
+      if (session.status === "CANCELLED") {
+        return session;
+      }
+      await assertClientAccess(auth, clientBroker, session.clientId);
+      const next: StructureSessionRecord = {
+        ...session,
+        status: "CANCELLED",
+        updatedAt: new Date(),
+      };
+      const saved = await repo.updateSession(next);
       await audit.append({
         actorUserId: auth.userId,
         actorRole: auth.role,
-        clientId: confirmed.clientId,
+        clientId: saved.clientId,
         entityType: "PolicyStructureSession",
-        entityId: confirmed.id,
-        action: "CONFIRM",
+        entityId: saved.id,
+        action: "UPDATE",
         diff: {
+          kind: "cancel",
           before: { status: session.status },
-          after: {
-            status: confirmed.status,
-            confirmTarget: confirmed.confirmTarget,
-            confirmedPolicyId,
-            confirmedTemplateId,
-          },
+          after: { status: "CANCELLED" },
         },
       });
-
-      return confirmed;
+      return saved;
     },
   };
 }

@@ -31,8 +31,9 @@ export default async function StructureChatPage() {
 
   const templates = await structureChat.listTemplates(auth);
   const sessions = await structureChat.listSessions(auth, scope.activeClientId);
-  const open = sessions.find((s) => s.status === "REVIEWING" || s.status === "DRAFTING");
-  const latestConfirmed = sessions.find((s) => s.status === "CONFIRMED");
+  const byUpdated = [...sessions].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+  const open = byUpdated.find((s) => s.status === "REVIEWING" || s.status === "DRAFTING");
+  const latestConfirmed = byUpdated.find((s) => s.status === "CONFIRMED");
   const active = open ?? latestConfirmed ?? null;
 
   let session: StructureSessionView | null = null;

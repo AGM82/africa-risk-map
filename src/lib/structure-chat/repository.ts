@@ -35,6 +35,7 @@ export type StructureChatRepository = {
   listTemplates(): Promise<readonly PolicyTemplateRecord[]>;
   getTemplate(id: string): Promise<PolicyTemplateRecord | null>;
   createTemplate(input: CreateTemplateInput): Promise<PolicyTemplateRecord>;
+  deleteTemplate(id: string): Promise<boolean>;
   listSessions(clientId?: string | null): Promise<readonly StructureSessionRecord[]>;
   getSession(id: string): Promise<StructureSessionRecord | null>;
   createSession(input: CreateSessionInput): Promise<StructureSessionRecord>;
