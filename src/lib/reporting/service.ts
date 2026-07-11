@@ -120,13 +120,21 @@ export function createReportingService(
           unsupportedReason = bookResult.reason;
         } else if (bookResult.book) {
           book = bookResult.book;
-          totalLives = book.totalLives;
+          // Trend series (and KPIs aligned to it) only when the book is supported —
+          // unsupported books throw inside computeBookTotals used by the series builder.
+          const endorsements = await orgLocations.listEndorsementsForPolicy(
+            bookResult.schedule.policy.id,
+          );
+          monthlySeries = buildMonthlyBookSeries(bookResult.schedule, endorsements);
+          insight = dashboardInsight(monthlySeries);
+          // Prefer as-of-today lives from the chart (effectiveDate-aware) over the
+          // unfiltered book rollup so KPI and trend stay consistent.
+          const now = new Date();
+          const nowKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+          const asOfPoint =
+            [...monthlySeries].reverse().find((p) => p.monthKey <= nowKey) ?? monthlySeries.at(-1);
+          totalLives = asOfPoint?.totalLives ?? book.totalLives;
         }
-        const endorsements = await orgLocations.listEndorsementsForPolicy(
-          bookResult.schedule.policy.id,
-        );
-        monthlySeries = buildMonthlyBookSeries(bookResult.schedule, endorsements);
-        insight = dashboardInsight(monthlySeries);
       }
 
       return {
@@ -164,6 +172,12 @@ export function createReportingService(
         (schedule?.categories ?? []).map(({ category }) => [category.id, category.categoryLabel]),
       );
 
+      const alreadyReversed = new Set(
+        endorsements
+          .filter((e) => e.note !== null && e.note.startsWith("Reversal of "))
+          .map((e) => e.note!.slice("Reversal of ".length)),
+      );
+
       return [...endorsements]
         .sort((a, b) => b.effectiveDate.getTime() - a.effectiveDate.getTime())
         .map((e) => {
@@ -186,7 +200,7 @@ export function createReportingService(
             kind: e.kind,
             createdByUserId: e.createdByUserId,
             createdAt: e.createdAt.toISOString(),
-            reversible: e.kind === "ADD" || e.kind === "REMOVE",
+            reversible: (e.kind === "ADD" || e.kind === "REMOVE") && !alreadyReversed.has(e.id),
           };
         });
     },
@@ -218,6 +232,12 @@ export function createReportingService(
         throw new EndorsementNotReversibleError("Cannot reverse a zero-delta endorsement");
       }
 
+      const reversalNote = `Reversal of ${original.id}`;
+      const existingReversal = all.find((e) => e.note === reversalNote);
+      if (existingReversal) {
+        return { original, compensating: existingReversal };
+      }
+
       const location = await orgLocations.getLocationById(original.organisationLocationId);
       if (location === null) {
         throw new EndorsementNotFoundError(endorsementId);
@@ -237,7 +257,7 @@ export function createReportingService(
         policyId: original.policyId,
         delta: compensatingDelta,
         effectiveDate: new Date(),
-        note: `Reversal of ${original.id}`,
+        note: reversalNote,
         kind,
         createdByUserId: auth.userId,
       });

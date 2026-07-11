@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AdminHeader } from "@/components/admin/admin-header";
@@ -174,11 +174,18 @@ export function CalculatorWorkspace({
   } | null>(null);
   const [confirmReady, setConfirmReady] = useState(false);
   const [lastForm, setLastForm] = useState<Record<string, unknown> | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const animatedPremium = useCountUp(
     book?.totalMonthlyPremium ?? 0,
     book !== null && unsupportedReason === null,
   );
+
+  function invalidatePreview() {
+    setPreview(null);
+    setConfirmReady(false);
+    setLastForm(null);
+  }
 
   function buildPayload(formData: FormData) {
     if (activeClientId === null) return null;
@@ -246,15 +253,22 @@ export function CalculatorWorkspace({
   }
 
   function handleConfirm() {
-    if (!lastForm || !confirmReady) {
+    const form = formRef.current;
+    if (!form) return;
+    const payload = buildPayload(new FormData(form));
+    if (!payload) return;
+    if (!lastForm || JSON.stringify(payload) !== JSON.stringify(lastForm) || !preview) {
+      setError("Simulate the current form values before confirming.");
+      setConfirmReady(false);
+      return;
+    }
+    if (!confirmReady) {
       setConfirmReady(true);
       return;
     }
     setError(null);
     startTransition(async () => {
-      const result = await confirmWhatIfAction(
-        lastForm as Parameters<typeof confirmWhatIfAction>[0],
-      );
+      const result = await confirmWhatIfAction(payload);
       if (!result.ok) {
         setError(result.error);
         setConfirmReady(false);
@@ -450,7 +464,12 @@ export function CalculatorWorkspace({
                 .
               </p>
             ) : null}
-            <form action={handleSimulate} className="flex flex-col gap-3">
+            <form
+              ref={formRef}
+              action={handleSimulate}
+              className="flex flex-col gap-3"
+              onChange={invalidatePreview}
+            >
               <div className="flex flex-wrap items-end gap-3">
                 <label className="flex flex-col gap-1 text-sm">
                   Existing organisation

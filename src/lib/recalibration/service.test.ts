@@ -126,6 +126,11 @@ describe("recalibration service", () => {
     const entries = await audit.list();
     expect(entries[0]?.action).toBe("CONFIRM");
     expect(entries[0]?.entityType).toBe("RecalibrationBatch");
+
+    // After lock, getProgress returns the locked batch (no new open batch).
+    const progress = await recalibration.getProgress(clientUser, "client-graa");
+    expect(progress.batch.id).toBe("recal-balanced");
+    expect(progress.batch.status).toBe("LOCKED");
   });
 
   it("rejects second lock", async () => {

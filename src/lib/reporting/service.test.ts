@@ -146,6 +146,16 @@ describe("reporting service", () => {
     expect(result.compensating.note).toContain("end-demo-zaf-add-mar");
     const entries = await audit.list();
     expect(entries.some((e) => e.entityType === "Endorsement")).toBe(true);
+
+    // Idempotent: second reverse returns the same compensating row.
+    const again = await reporting.reverseEndorsement(
+      insurer,
+      "client-graa",
+      "end-demo-zaf-add-mar",
+    );
+    expect(again.compensating.id).toBe(result.compensating.id);
+    const ledger = await reporting.listEndorsementLedger(insurer, "client-graa");
+    expect(ledger.find((r) => r.id === "end-demo-zaf-add-mar")?.reversible).toBe(false);
   });
 
   it("blocks reverse without locked recalibration", async () => {

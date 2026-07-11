@@ -83,28 +83,51 @@ export function createRecalibrationService(
 
     const locations = await orgLocations.listLocationsForClient(clientId);
     const existing = await orgLocations.listEndorsementsForPolicy(policyId);
+    const rolledByLocation = new Map<string, number>();
+    for (const e of existing) {
+      rolledByLocation.set(
+        e.organisationLocationId,
+        (rolledByLocation.get(e.organisationLocationId) ?? 0) + e.delta,
+      );
+    }
     const alreadyBaselined = new Set(
       existing.filter((e) => e.kind === "BASELINE").map((e) => e.organisationLocationId),
     );
 
     const effectiveDate = new Date();
     for (const location of locations) {
-      if (
-        location.coverCategoryId === null ||
-        location.headcount <= 0 ||
-        alreadyBaselined.has(location.id)
-      ) {
+      if (location.coverCategoryId === null) continue;
+
+      const rolled = rolledByLocation.get(location.id) ?? 0;
+      if (!alreadyBaselined.has(location.id)) {
+        if (location.headcount <= 0) continue;
+        await orgLocations.createEndorsement({
+          clientId,
+          organisationLocationId: location.id,
+          coverCategoryId: location.coverCategoryId,
+          policyId,
+          delta: location.headcount,
+          effectiveDate,
+          note: "Baseline lock",
+          kind: "BASELINE",
+          createdByUserId: auth.userId,
+        });
         continue;
       }
+
+      // Location already has a BASELINE: close any gap vs current headcount so
+      // location totals and endorsement rollups stay aligned after lock.
+      const diff = location.headcount - rolled;
+      if (diff === 0) continue;
       await orgLocations.createEndorsement({
         clientId,
         organisationLocationId: location.id,
         coverCategoryId: location.coverCategoryId,
         policyId,
-        delta: location.headcount,
+        delta: diff,
         effectiveDate,
-        note: "Baseline lock",
-        kind: "BASELINE",
+        note: "Baseline lock headcount reconcile",
+        kind: diff > 0 ? "ADD" : "REMOVE",
         createdByUserId: auth.userId,
       });
     }
@@ -145,18 +168,35 @@ export function createRecalibrationService(
     },
 
     async getProgress(auth: AuthContext, clientId: string): Promise<RecalibrationProgressSnapshot> {
+      await assertClientAccess(auth, clientId);
+      const open = await repo.getOpenBatch(clientId);
+      if (open !== null) {
+        return progressForBatch(open);
+      }
+      const locked = await this.getLockedBatch(auth, clientId);
+      if (locked !== null) {
+        return progressForBatch(locked);
+      }
+      // No batch yet — create an open one (writers only; clients cannot seed).
       const batch = await this.getOrCreateOpenBatch(auth, clientId);
       return progressForBatch(batch);
     },
 
-    /** Most recent LOCKED batch for the client, or null. */
+    /** Most recently locked batch for the client (by lockedAt), or null. */
     async getLockedBatch(
       auth: AuthContext,
       clientId: string,
     ): Promise<RecalibrationBatchRecord | null> {
       await assertClientAccess(auth, clientId);
       const batches = await repo.listBatches(clientId);
-      return batches.find((b) => b.status === "LOCKED") ?? null;
+      let latest: RecalibrationBatchRecord | null = null;
+      for (const b of batches) {
+        if (b.status !== "LOCKED" || b.lockedAt === null) continue;
+        if (latest === null || b.lockedAt.getTime() > latest.lockedAt!.getTime()) {
+          latest = b;
+        }
+      }
+      return latest;
     },
 
     async lockBatch(auth: AuthContext, batchId: string): Promise<RecalibrationBatchRecord> {
