@@ -113,6 +113,8 @@ export function CensusReviewWorkspace({
           <ul className="space-y-4">
             {rows.map((row) => {
               const reviewable = row.status === "SUBMITTED" || row.status === "CHANGES_REQUESTED";
+              // requestChanges only accepts SUBMITTED; after changes are requested, wait for resubmit.
+              const canRequestChanges = row.status === "SUBMITTED";
               return (
                 <li key={row.id} className="rounded-lg border p-4">
                   <div className="flex flex-wrap items-start justify-between gap-2">
@@ -165,14 +167,16 @@ export function CensusReviewWorkspace({
                         >
                           Accept into book
                         </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          disabled={pending}
-                          onClick={() => runReview(row.id, "changes")}
-                        >
-                          Request changes
-                        </Button>
+                        {canRequestChanges ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            disabled={pending}
+                            onClick={() => runReview(row.id, "changes")}
+                          >
+                            Request changes
+                          </Button>
+                        ) : null}
                         <Button
                           type="button"
                           variant="outline"

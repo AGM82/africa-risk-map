@@ -5,6 +5,7 @@ import { createFixtureCensusRepository, resetCensusRepoIds } from "@/lib/census/
 import {
   CensusInvitationInvalidError,
   CensusReviewForbiddenError,
+  CensusSubmissionNotReviewableError,
   createCensusService,
 } from "@/lib/census/service";
 import { hashCensusToken } from "@/lib/census/token";
@@ -242,7 +243,7 @@ describe("createCensusService", () => {
   });
 
   it("blocks CLIENT from accepting and blocks Premium without full underwriting", async () => {
-    const { census } = build(true);
+    const { census, orgLocationRepo } = build(true);
     const invite = await census.createInvitation(insurer, {
       clientId: "client-graa",
       memberOrganisationId: "member-demo-north",
@@ -269,10 +270,26 @@ describe("createCensusService", () => {
     await expect(census.acceptSubmission(insurer, submitted.submission.id)).rejects.toBeInstanceOf(
       UnderwritingGateError,
     );
+
+    // Failed accept must not mark the org accepted or leave partial book writes.
+    const org = await orgLocationRepo.getMemberOrganisationById("member-demo-north");
+    expect(org?.status).toBe("UNDER_REVIEW");
+    expect(org?.lastCensusAcceptedAt?.toISOString()).toBe("2025-11-15T00:00:00.000Z");
+    const loc = await orgLocationRepo.getLocationById("loc-demo-zaf");
+    expect(loc?.headcount).toBe(47);
+    const stillOpen = await census.listSubmissionsForReview(insurer, "client-graa");
+    expect(stillOpen.some((r) => r.submission.id === submitted.submission.id)).toBe(true);
+    expect(
+      stillOpen.find((r) => r.submission.id === submitted.submission.id)?.submission.status,
+    ).toBe("SUBMITTED");
   });
 
-  it("declines a submission and marks the member org DECLINED", async () => {
+  it("zeros existing unlocked headcount when census declares 0 for that plan", async () => {
     const { census, orgLocationRepo } = build(false);
+    const before = await orgLocationRepo.getLocationById("loc-demo-ken");
+    expect(before?.headcount).toBe(16);
+    expect(before?.assignedPlanType).toBe("PREMIUM");
+
     const invite = await census.createInvitation(insurer, {
       clientId: "client-graa",
       memberOrganisationId: "member-demo-south",
@@ -281,21 +298,130 @@ describe("createCensusService", () => {
     const submitted = await census.submitByToken(invite.rawToken, {
       organisationName: "Southern Park Operator (demo)",
       asOfDate: "2026-07-01",
-      preferredPlanType: "PREMIUM",
+      preferredPlanType: "ESSENTIAL",
       locationLines: [
         {
           territoryId: "terr-ken",
           siteName: "Demo park — Kenya",
-          essentialHeadcount: 0,
-          premiumHeadcount: 10,
+          essentialHeadcount: 5,
+          premiumHeadcount: 0,
+        },
+      ],
+    });
+    await census.acceptSubmission(insurer, submitted.submission.id);
+
+    const premiumLoc = await orgLocationRepo.getLocationById("loc-demo-ken");
+    expect(premiumLoc?.headcount).toBe(0);
+    const locations = await orgLocationRepo.listLocationsForOrganisation("member-demo-south");
+    const essentialLoc = locations.find(
+      (l) =>
+        l.siteName === "Demo park — Kenya" &&
+        l.assignedPlanType === "ESSENTIAL" &&
+        l.territoryId === "terr-ken",
+    );
+    expect(essentialLoc?.headcount).toBe(5);
+  });
+
+  it("writes REMOVE endorsements when locked census declares 0 for an existing plan", async () => {
+    const { census, orgLocationRepo } = build(true);
+    const before = await orgLocationRepo.getLocationById("loc-demo-ken");
+    expect(before?.headcount).toBe(16);
+
+    const invite = await census.createInvitation(insurer, {
+      clientId: "client-graa",
+      memberOrganisationId: "member-demo-south",
+      purpose: "UPDATE",
+    });
+    const submitted = await census.submitByToken(invite.rawToken, {
+      organisationName: "Southern Park Operator (demo)",
+      asOfDate: "2026-07-01",
+      preferredPlanType: "ESSENTIAL",
+      locationLines: [
+        {
+          territoryId: "terr-ken",
+          siteName: "Demo park — Kenya",
+          essentialHeadcount: 5,
+          premiumHeadcount: 0,
+        },
+      ],
+    });
+    await census.acceptSubmission(insurer, submitted.submission.id);
+
+    const premiumLoc = await orgLocationRepo.getLocationById("loc-demo-ken");
+    expect(premiumLoc?.headcount).toBe(0);
+    const ends = await orgLocationRepo.listEndorsementsForClient("client-graa");
+    expect(
+      ends.some(
+        (e) =>
+          e.organisationLocationId === "loc-demo-ken" &&
+          e.kind === "REMOVE" &&
+          e.delta === -16 &&
+          e.note?.includes("Census accept"),
+      ),
+    ).toBe(true);
+  });
+  it("declines a NEW submission and marks the member org DECLINED", async () => {
+    const { census, orgLocationRepo } = build(false);
+    const stub = await census.createStubOrganisation(insurer, {
+      clientId: "client-graa",
+      name: "Prospective Park",
+    });
+    const invite = await census.createInvitation(insurer, {
+      clientId: "client-graa",
+      memberOrganisationId: stub.id,
+      purpose: "NEW",
+    });
+    const submitted = await census.submitByToken(invite.rawToken, {
+      organisationName: "Prospective Park",
+      asOfDate: "2026-07-01",
+      preferredPlanType: "ESSENTIAL",
+      locationLines: [
+        {
+          territoryId: "terr-zaf",
+          siteName: "Prospective site",
+          essentialHeadcount: 5,
+          premiumHeadcount: 0,
         },
       ],
     });
     await census.declineSubmission(insurer, submitted.submission.id, {
       reviewNote: "Incomplete underwriting",
     });
-    const org = await orgLocationRepo.getMemberOrganisationById("member-demo-south");
+    const org = await orgLocationRepo.getMemberOrganisationById(stub.id);
     expect(org?.status).toBe("DECLINED");
+  });
+
+  it("declines an UPDATE (recensus) submission without deactivating the member org", async () => {
+    const { census, orgLocationRepo } = build(false);
+    const before = await orgLocationRepo.getMemberOrganisationById("member-demo-north");
+    expect(before?.status).toBe("ACTIVE");
+
+    const invite = await census.createInvitation(insurer, {
+      clientId: "client-graa",
+      memberOrganisationId: "member-demo-north",
+      purpose: "UPDATE",
+    });
+    const submitted = await census.submitByToken(invite.rawToken, {
+      organisationName: "Northern Reserve Operator (demo)",
+      asOfDate: "2026-07-01",
+      preferredPlanType: "ESSENTIAL",
+      locationLines: [
+        {
+          territoryId: "terr-zaf",
+          siteName: "Demo reserve — Low risk",
+          essentialHeadcount: 40,
+          premiumHeadcount: 0,
+        },
+      ],
+    });
+    const underReview = await orgLocationRepo.getMemberOrganisationById("member-demo-north");
+    expect(underReview?.status).toBe("UNDER_REVIEW");
+
+    await census.declineSubmission(insurer, submitted.submission.id, {
+      reviewNote: "Keep current book figures",
+    });
+    const org = await orgLocationRepo.getMemberOrganisationById("member-demo-north");
+    expect(org?.status).toBe("ACTIVE");
   });
 
   it("requests changes and allows a later resubmit", async () => {
@@ -322,6 +448,12 @@ describe("createCensusService", () => {
       reviewNote: "Please confirm Kenya site too",
     });
     expect(reviewed.status).toBe("CHANGES_REQUESTED");
+
+    await expect(
+      census.requestChanges(insurer, submitted.submission.id, {
+        reviewNote: "Still waiting",
+      }),
+    ).rejects.toBeInstanceOf(CensusSubmissionNotReviewableError);
 
     const again = await census.submitByToken(invite.rawToken, {
       organisationName: "Northern Reserve Operator (demo)",

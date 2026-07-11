@@ -1,5 +1,5 @@
-import { describe, it, vi } from "vitest";
-import { render } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
 import { CensusPublicForm } from "@/components/census/census-public-form";
 import { CensusReviewWorkspace } from "@/components/census/census-review-workspace";
 import { expectNoA11yViolations } from "@/test/axe";
@@ -83,5 +83,41 @@ describe("census workspaces a11y", () => {
       />,
     );
     await expectNoA11yViolations(container);
+  });
+
+  it("hides Request changes for CHANGES_REQUESTED but keeps Accept and Decline", () => {
+    render(
+      <CensusReviewWorkspace
+        authRole="BROKER"
+        clientName="GRAA (demo)"
+        activeClientId="client-graa"
+        switcherOptions={[{ id: "client-graa", name: "GRAA (demo)" }]}
+        canReview
+        rows={[
+          {
+            id: "csub-changes",
+            organisationName: "Southern Park Operator (demo)",
+            status: "CHANGES_REQUESTED",
+            asOfDateIso: "2026-06-30T00:00:00.000Z",
+            preferredPlanType: "PREMIUM",
+            contactEmail: "south-ops@example.com",
+            riskMgmtPlanAvailable: false,
+            crisisMgmtPlanAvailable: false,
+            reviewNote: "Please confirm Kenya site too",
+            locationLines: [
+              {
+                territoryLabel: "Kenya",
+                siteName: "Demo park — Kenya",
+                essentialHeadcount: 0,
+                premiumHeadcount: 18,
+              },
+            ],
+          },
+        ]}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Accept into book" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Decline" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Request changes" })).toBeNull();
   });
 });

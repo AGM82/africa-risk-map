@@ -148,6 +148,43 @@ export function createCensusService(
     );
   }
 
+  async function assertDeclaredHeadcountApplicable(input: {
+    org: MemberOrganisationRecord;
+    territoryId: string;
+    siteName: string;
+    planType: PlanType;
+    declared: number;
+    locked: boolean;
+    policyId: string | null;
+    coverCategoryId: string | null;
+  }): Promise<void> {
+    const { org, territoryId, siteName, planType, declared, locked, policyId, coverCategoryId } =
+      input;
+    const location = await findLocationSlot(org.id, territoryId, siteName, planType);
+    if (declared <= 0 && location === null) {
+      return;
+    }
+
+    if (declared > 0) {
+      const territory = await territories.getById(territoryId);
+      if (territory === null) {
+        throw new CensusAcceptBlockedError(`Unknown territory: ${territoryId}`);
+      }
+      assertPlanEligibleInTerritory(territory.benefitOptions, planType);
+      assertUnderwritingGates(territory.riskCategory, planType, {
+        riskMgmtPlanOnFile: org.riskMgmtPlanOnFile,
+        crisisMgmtPlanOnFile: org.crisisMgmtPlanOnFile,
+        fullUnderwritingApproved: org.fullUnderwritingApproved,
+      });
+    }
+
+    if (locked && (policyId === null || coverCategoryId === null)) {
+      throw new CensusAcceptBlockedError(
+        "Cannot accept into the ledger without an on-risk policy and cover category",
+      );
+    }
+  }
+
   async function applyDeclaredHeadcount(input: {
     auth: AuthContext;
     org: MemberOrganisationRecord;
@@ -170,20 +207,13 @@ export function createCensusService(
       policyId,
       coverCategoryId,
     } = input;
-    if (declared <= 0) return;
-
-    const territory = await territories.getById(territoryId);
-    if (territory === null) {
-      throw new CensusAcceptBlockedError(`Unknown territory: ${territoryId}`);
-    }
-    assertPlanEligibleInTerritory(territory.benefitOptions, planType);
-    assertUnderwritingGates(territory.riskCategory, planType, {
-      riskMgmtPlanOnFile: org.riskMgmtPlanOnFile,
-      crisisMgmtPlanOnFile: org.crisisMgmtPlanOnFile,
-      fullUnderwritingApproved: org.fullUnderwritingApproved,
-    });
 
     let location = await findLocationSlot(org.id, territoryId, siteName, planType);
+    // Declared zero with no existing slot: nothing to clear. Positive counts are
+    // validated in assertDeclaredHeadcountApplicable before any book writes.
+    if (declared <= 0 && location === null) {
+      return;
+    }
 
     if (!locked) {
       if (location === null) {
@@ -510,6 +540,72 @@ export function createCensusService(
       const locked = await recalibration.getLockedBatch(auth, org.clientId);
       const schedule = await policy.getActiveSchedule(auth, org.clientId);
       const policyId = schedule?.policy.id ?? null;
+      const isLocked = locked !== null;
+
+      // Apply underwriting availability flags in-memory for gates; persist ACTIVE
+      // only after location writes succeed so a failed accept cannot leave the org
+      // looking accepted while the submission remains reviewable.
+      const orgForAccept: MemberOrganisationRecord = {
+        ...org,
+        name: row.submission.organisationName,
+        contactName: row.submission.contactName,
+        contactEmail: row.submission.contactEmail,
+        contactPhone: row.submission.contactPhone,
+        defaultPlanType: row.submission.preferredPlanType,
+        riskMgmtPlanOnFile: org.riskMgmtPlanOnFile || row.submission.riskMgmtPlanAvailable,
+        crisisMgmtPlanOnFile: org.crisisMgmtPlanOnFile || row.submission.crisisMgmtPlanAvailable,
+      };
+
+      const essentialCategoryId = await categoryIdForPlan(auth, org.clientId, "ESSENTIAL");
+      const premiumCategoryId = await categoryIdForPlan(auth, org.clientId, "PREMIUM");
+
+      for (const line of row.locationLines) {
+        await assertDeclaredHeadcountApplicable({
+          org: orgForAccept,
+          territoryId: line.territoryId,
+          siteName: line.siteName,
+          planType: "ESSENTIAL",
+          declared: line.essentialHeadcount,
+          locked: isLocked,
+          policyId,
+          coverCategoryId: essentialCategoryId,
+        });
+        await assertDeclaredHeadcountApplicable({
+          org: orgForAccept,
+          territoryId: line.territoryId,
+          siteName: line.siteName,
+          planType: "PREMIUM",
+          declared: line.premiumHeadcount,
+          locked: isLocked,
+          policyId,
+          coverCategoryId: premiumCategoryId,
+        });
+      }
+
+      for (const line of row.locationLines) {
+        await applyDeclaredHeadcount({
+          auth,
+          org: orgForAccept,
+          territoryId: line.territoryId,
+          siteName: line.siteName,
+          planType: "ESSENTIAL",
+          declared: line.essentialHeadcount,
+          locked: isLocked,
+          policyId,
+          coverCategoryId: essentialCategoryId,
+        });
+        await applyDeclaredHeadcount({
+          auth,
+          org: orgForAccept,
+          territoryId: line.territoryId,
+          siteName: line.siteName,
+          planType: "PREMIUM",
+          declared: line.premiumHeadcount,
+          locked: isLocked,
+          policyId,
+          coverCategoryId: premiumCategoryId,
+        });
+      }
 
       org =
         (await orgLocations.updateMemberOrganisation(org.id, {
@@ -519,37 +615,10 @@ export function createCensusService(
           contactEmail: row.submission.contactEmail,
           contactPhone: row.submission.contactPhone,
           defaultPlanType: row.submission.preferredPlanType,
-          riskMgmtPlanOnFile: org.riskMgmtPlanOnFile || row.submission.riskMgmtPlanAvailable,
-          crisisMgmtPlanOnFile: org.crisisMgmtPlanOnFile || row.submission.crisisMgmtPlanAvailable,
+          riskMgmtPlanOnFile: orgForAccept.riskMgmtPlanOnFile,
+          crisisMgmtPlanOnFile: orgForAccept.crisisMgmtPlanOnFile,
           lastCensusAcceptedAt: new Date(),
         })) ?? org;
-
-      for (const line of row.locationLines) {
-        const essentialCategoryId = await categoryIdForPlan(auth, org.clientId, "ESSENTIAL");
-        const premiumCategoryId = await categoryIdForPlan(auth, org.clientId, "PREMIUM");
-        await applyDeclaredHeadcount({
-          auth,
-          org,
-          territoryId: line.territoryId,
-          siteName: line.siteName,
-          planType: "ESSENTIAL",
-          declared: line.essentialHeadcount,
-          locked: locked !== null,
-          policyId,
-          coverCategoryId: essentialCategoryId,
-        });
-        await applyDeclaredHeadcount({
-          auth,
-          org,
-          territoryId: line.territoryId,
-          siteName: line.siteName,
-          planType: "PREMIUM",
-          declared: line.premiumHeadcount,
-          locked: locked !== null,
-          policyId,
-          coverCategoryId: premiumCategoryId,
-        });
-      }
 
       const updated = await repo.updateSubmissionStatus(submissionId, {
         status: "ACCEPTED",
@@ -606,8 +675,12 @@ export function createCensusService(
         throw new CensusSubmissionNotFoundError(submissionId);
       }
 
+      // NEW intake: reject the org. UPDATE (recensus): keep the live book —
+      // only the submission is declined; do not deactivate an already-active org.
+      const invitation = await repo.getInvitationById(row.submission.invitationId);
+      const orgStatusAfterDecline = invitation?.purpose === "UPDATE" ? "ACTIVE" : "DECLINED";
       await orgLocations.updateMemberOrganisation(row.submission.memberOrganisationId, {
-        status: "DECLINED",
+        status: orgStatusAfterDecline,
       });
       await repo.revokeInvitation(row.submission.invitationId, new Date());
 

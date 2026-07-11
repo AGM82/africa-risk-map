@@ -34,15 +34,26 @@ Invite (copy link) → Public form submit → UNDER_REVIEW
 
 ## Accept rules
 
-1. Update MemberOrganisation profile (name, contact, preferred plan); set
-   `ACTIVE`; set risk/crisis _available_ flags when checked — never auto-set
+1. Preflight underwriting/eligibility for every declared plan count, then upsert
+   locations. Only after location writes succeed: update MemberOrganisation
+   profile, set `ACTIVE`, set `lastCensusAcceptedAt`, and mark the submission
+   `ACCEPTED` (so a failed gate cannot leave the org looking accepted).
+2. Set risk/crisis _available_ flags when checked — never auto-set
    `fullUnderwritingApproved`.
-2. Upsert locations by `(org, territory, siteName, planType)`:
+3. Upsert locations by `(org, territory, siteName, planType)`:
+   - Declared `0` clears an existing slot (unlocked: set headcount; locked:
+     `REMOVE` endorsement). No slot and declared `0` is a no-op.
    - **Recalibration unlocked:** set `OrganisationLocation.headcount` directly.
    - **Locked:** create location at headcount 0 if needed; write `ADD`/`REMOVE`
      endorsements for the delta vs current book (same pattern as premium what-if).
-3. Underwriting gates (`eligibility.ts`) still apply on accept for Premium /
+4. Underwriting gates (`eligibility.ts`) still apply on accept for Premium /
    high-risk territories.
+
+## Decline rules
+
+- **NEW** invite: mark the member org `DECLINED` (onboarding rejected).
+- **UPDATE** (recensus): decline only the submission; restore the org to
+  `ACTIVE` so the live book is not deactivated.
 
 ## POPIA
 

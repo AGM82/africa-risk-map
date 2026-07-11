@@ -96,7 +96,8 @@ export function OrganisationsWorkspace({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [linkCopied, setLinkCopied] = useState<string | null>(null);
+  const [linkCopiedOrgId, setLinkCopiedOrgId] = useState<string | null>(null);
+  const [linkFallbackUrl, setLinkFallbackUrl] = useState<string | null>(null);
   const [expandedOrgId, setExpandedOrgId] = useState<string | null>(rows[0]?.id ?? null);
 
   function handleCreateOrg(formData: FormData) {
@@ -134,7 +135,8 @@ export function OrganisationsWorkspace({
   function handleCopyCensusLink(memberOrganisationId: string, purpose: "NEW" | "UPDATE") {
     if (activeClientId === null) return;
     setError(null);
-    setLinkCopied(null);
+    setLinkCopiedOrgId(null);
+    setLinkFallbackUrl(null);
     startTransition(async () => {
       const result = await createCensusInvitationAction({
         clientId: activeClientId,
@@ -148,9 +150,10 @@ export function OrganisationsWorkspace({
       const absolute = `${window.location.origin}${result.data.path}`;
       try {
         await navigator.clipboard.writeText(absolute);
-        setLinkCopied(memberOrganisationId);
+        setLinkCopiedOrgId(memberOrganisationId);
       } catch {
-        setLinkCopied(absolute);
+        setLinkCopiedOrgId(memberOrganisationId);
+        setLinkFallbackUrl(absolute);
       }
       router.refresh();
     });
@@ -340,11 +343,14 @@ export function OrganisationsWorkspace({
                               Open {row.openInvitationPurpose.toLowerCase()} invite
                             </span>
                           ) : null}
-                          {linkCopied === row.id ? (
-                            <span className="text-xs text-emerald-700">Link copied</span>
-                          ) : linkCopied && linkCopied.startsWith("http") ? (
+                          {linkCopiedOrgId === row.id ? (
+                            <span className="text-xs text-emerald-700">
+                              {linkFallbackUrl ? "Copy this link:" : "Link copied"}
+                            </span>
+                          ) : null}
+                          {linkCopiedOrgId === row.id && linkFallbackUrl ? (
                             <span className="text-muted-foreground text-xs break-all">
-                              {linkCopied}
+                              {linkFallbackUrl}
                             </span>
                           ) : null}
                         </div>
