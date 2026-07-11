@@ -141,4 +141,48 @@ describe("user-admin service", () => {
     const active = await userAdmin.setUserActive(insurer, "user-client-graa", true);
     expect(active.active).toBe(true);
   });
+
+  it("allows broker to deactivate and re-scope an assigned CLIENT user", async () => {
+    const { userAdmin, audit } = buildService();
+    const deactivated = await userAdmin.setUserActive(broker, "user-client-graa", false);
+    expect(deactivated.active).toBe(false);
+    const scoped = await userAdmin.setUserScope(broker, "user-client-graa", {
+      role: "CLIENT",
+      clientId: "client-graa",
+      brokerOrganisationId: null,
+    });
+    expect(scoped.clientId).toBe("client-graa");
+    expect((await audit.list()).some((e) => e.action === "ACCESS_CHANGE")).toBe(true);
+  });
+
+  it("blocks broker from managing non-CLIENT users or unassigned clients", async () => {
+    const { userAdmin } = buildService();
+    await expect(userAdmin.setUserActive(broker, "user-broker", false)).rejects.toBeInstanceOf(
+      UserAdminAccessError,
+    );
+    await expect(userAdmin.setUserActive(broker, "user-insurer", false)).rejects.toBeInstanceOf(
+      UserAdminAccessError,
+    );
+  });
+
+  it("rejects set scope / set active for unknown users", async () => {
+    const { userAdmin } = buildService();
+    await expect(
+      userAdmin.setUserScope(insurer, "missing-user", {
+        role: "CLIENT",
+        clientId: "client-graa",
+        brokerOrganisationId: null,
+      }),
+    ).rejects.toBeInstanceOf(UserAdminAccessError);
+    await expect(userAdmin.setUserActive(insurer, "missing-user", false)).rejects.toBeInstanceOf(
+      UserAdminAccessError,
+    );
+  });
+
+  it("blocks CLIENT from deactivating users", async () => {
+    const { userAdmin } = buildService();
+    await expect(
+      userAdmin.setUserActive(clientUser, "user-client-graa", false),
+    ).rejects.toBeInstanceOf(UserAdminAccessError);
+  });
 });

@@ -3,7 +3,6 @@ import { createFixtureAuditWriter, resetAuditWriterIds } from "@/lib/audit/write
 import type { AuthContext } from "@/lib/auth/types";
 import { createFixtureCensusRepository, resetCensusRepoIds } from "@/lib/census/fixture-repository";
 import {
-  CensusInviteForbiddenError,
   CensusInvitationInvalidError,
   CensusReviewForbiddenError,
   createCensusService,
@@ -272,10 +271,115 @@ describe("createCensusService", () => {
     );
   });
 
-  it("does not invent invite rights for unauthenticated roles beyond the three platform roles", () => {
-    // Type-level / runtime guard: CLIENT is allowed to invite; assert helper still throws for unknown.
-    expect(() => {
-      throw new CensusInviteForbiddenError();
-    }).toThrow(CensusInviteForbiddenError);
+  it("declines a submission and marks the member org DECLINED", async () => {
+    const { census, orgLocationRepo } = build(false);
+    const invite = await census.createInvitation(insurer, {
+      clientId: "client-graa",
+      memberOrganisationId: "member-demo-south",
+      purpose: "UPDATE",
+    });
+    const submitted = await census.submitByToken(invite.rawToken, {
+      organisationName: "Southern Park Operator (demo)",
+      asOfDate: "2026-07-01",
+      preferredPlanType: "PREMIUM",
+      locationLines: [
+        {
+          territoryId: "terr-ken",
+          siteName: "Demo park — Kenya",
+          essentialHeadcount: 0,
+          premiumHeadcount: 10,
+        },
+      ],
+    });
+    await census.declineSubmission(insurer, submitted.submission.id, {
+      reviewNote: "Incomplete underwriting",
+    });
+    const org = await orgLocationRepo.getMemberOrganisationById("member-demo-south");
+    expect(org?.status).toBe("DECLINED");
+  });
+
+  it("requests changes and allows a later resubmit", async () => {
+    const { census } = build(false);
+    const invite = await census.createInvitation(insurer, {
+      clientId: "client-graa",
+      memberOrganisationId: "member-demo-north",
+      purpose: "UPDATE",
+    });
+    const submitted = await census.submitByToken(invite.rawToken, {
+      organisationName: "Northern Reserve Operator (demo)",
+      asOfDate: "2026-07-01",
+      preferredPlanType: "ESSENTIAL",
+      locationLines: [
+        {
+          territoryId: "terr-zaf",
+          siteName: "Demo reserve — Low risk",
+          essentialHeadcount: 40,
+          premiumHeadcount: 0,
+        },
+      ],
+    });
+    const reviewed = await census.requestChanges(insurer, submitted.submission.id, {
+      reviewNote: "Please confirm Kenya site too",
+    });
+    expect(reviewed.status).toBe("CHANGES_REQUESTED");
+
+    const again = await census.submitByToken(invite.rawToken, {
+      organisationName: "Northern Reserve Operator (demo)",
+      asOfDate: "2026-07-02",
+      preferredPlanType: "ESSENTIAL",
+      locationLines: [
+        {
+          territoryId: "terr-zaf",
+          siteName: "Demo reserve — Low risk",
+          essentialHeadcount: 41,
+          premiumHeadcount: 0,
+        },
+      ],
+    });
+    expect(again.submission.status).toBe("SUBMITTED");
+  });
+
+  it("creates a new location slot on unlocked accept", async () => {
+    const { census, orgLocationRepo } = build(false);
+    const invite = await census.createInvitation(insurer, {
+      clientId: "client-graa",
+      memberOrganisationId: "member-demo-north",
+      purpose: "UPDATE",
+    });
+    const submitted = await census.submitByToken(invite.rawToken, {
+      organisationName: "Northern Reserve Operator (demo)",
+      asOfDate: "2026-07-01",
+      preferredPlanType: "ESSENTIAL",
+      riskMgmtPlanAvailable: true,
+      crisisMgmtPlanAvailable: true,
+      locationLines: [
+        {
+          territoryId: "terr-zaf",
+          siteName: "New demo satellite camp",
+          essentialHeadcount: 3,
+          premiumHeadcount: 0,
+        },
+      ],
+    });
+    await census.acceptSubmission(insurer, submitted.submission.id);
+    const locations = await orgLocationRepo.listLocationsForOrganisation("member-demo-north");
+    expect(
+      locations.some((l) => l.siteName === "New demo satellite camp" && l.headcount === 3),
+    ).toBe(true);
+  });
+
+  it("lists invitations and can revoke an open invite", async () => {
+    const { census } = build(false);
+    const invite = await census.createInvitation(insurer, {
+      clientId: "client-graa",
+      memberOrganisationId: "member-demo-north",
+      purpose: "NEW",
+    });
+    const listed = await census.listInvitations(insurer, "client-graa");
+    expect(listed.some((i) => i.id === invite.invitation.id)).toBe(true);
+    await census.revokeInvitation(insurer, invite.invitation.id);
+    await expect(census.getFormByToken(invite.rawToken)).rejects.toBeInstanceOf(
+      CensusInvitationInvalidError,
+    );
   });
 });
