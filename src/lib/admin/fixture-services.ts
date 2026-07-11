@@ -11,16 +11,23 @@ import { createPolicyService } from "@/lib/policy/service";
 import { createFixtureRecalibrationRepository } from "@/lib/recalibration/fixture-repository";
 import { RECALIBRATION_FIXTURES } from "@/lib/recalibration/fixtures";
 import { createRecalibrationService } from "@/lib/recalibration/service";
+import { createDefaultStructureDrafter } from "@/lib/structure-chat/anthropic-drafter";
+import { createFixtureStructureChatRepository } from "@/lib/structure-chat/fixture-repository";
+import { STRUCTURE_CHAT_FIXTURES } from "@/lib/structure-chat/fixtures";
+import { createStructureChatService } from "@/lib/structure-chat/service";
 import { createFixtureTerritoryRepository } from "@/lib/territory/fixture-repository";
 import { TERRITORY_FIXTURES } from "@/lib/territory/fixtures";
 import { createFixtureUserDirectory } from "@/lib/user-admin/directory";
 import { MANAGED_USER_FIXTURES } from "@/lib/user-admin/fixtures";
 import { createUserAdminService } from "@/lib/user-admin/service";
 
-/**
- * Builds admin services wired to in-memory fixtures until Prisma adapters land.
- */
-export function createFixtureAdminServices() {
+type FixtureAdminServices = ReturnType<typeof buildFixtureAdminServices>;
+
+const globalForFixtures = globalThis as unknown as {
+  fixtureAdminServices?: FixtureAdminServices;
+};
+
+function buildFixtureAdminServices() {
   const audit = createFixtureAuditWriter();
   const clientBroker = createClientBrokerService(
     createFixtureClientBrokerRepository(CLIENT_BROKER_FIXTURES),
@@ -44,10 +51,29 @@ export function createFixtureAdminServices() {
       return territories.map((t) => ({ id: t.id, benefitOptions: t.benefitOptions }));
     },
   );
+  const structureChat = createStructureChatService(
+    createFixtureStructureChatRepository(STRUCTURE_CHAT_FIXTURES),
+    clientBroker,
+    policy,
+    createDefaultStructureDrafter(),
+    audit,
+  );
   const userAdmin = createUserAdminService(
     createFixtureUserDirectory(MANAGED_USER_FIXTURES),
     clientBroker,
     audit,
   );
-  return { audit, clientBroker, orgLocation, recalibration, policy, userAdmin };
+  return { audit, clientBroker, orgLocation, recalibration, policy, structureChat, userAdmin };
+}
+
+/**
+ * Builds admin services wired to in-memory fixtures until Prisma adapters land.
+ * Cached on globalThis so mutations (e.g. Structure Chat sessions) survive
+ * server-action → revalidate within the same Node process.
+ */
+export function createFixtureAdminServices() {
+  if (!globalForFixtures.fixtureAdminServices) {
+    globalForFixtures.fixtureAdminServices = buildFixtureAdminServices();
+  }
+  return globalForFixtures.fixtureAdminServices;
 }

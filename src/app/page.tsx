@@ -4,6 +4,7 @@ import {
   Building2,
   Calculator,
   MapPinned,
+  MessagesSquare,
   Scale,
   ShieldCheck,
   Users,
@@ -136,6 +137,22 @@ export default async function HomePage() {
               mix.
             </CardContent>
           </Card>
+          {authContext.role !== "CLIENT" ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-muted-foreground flex items-center gap-2 text-sm font-medium">
+                  <MessagesSquare className="size-4" /> Structure Chat
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-muted-foreground text-sm">
+                <Link href="/structure-chat" className="text-foreground font-medium underline">
+                  Draft a schedule
+                </Link>{" "}
+                — paste term-sheet text, review the draft, Insurer confirms to Policy and/or
+                template.
+              </CardContent>
+            </Card>
+          ) : null}
         </div>
 
         <p className="text-muted-foreground text-xs">

@@ -28,7 +28,8 @@ SENTRY_PROJECT=""
 INNGEST_EVENT_KEY=""
 INNGEST_SIGNING_KEY=""
 
-# --- AI provider (Anthropic) — wired in the policy-structure-chat / ai-news-monitor to-dos ---
+# --- AI provider (Anthropic) — Structure Chat / ai-news-monitor ---
+# Optional. When empty, Structure Chat uses the fixture drafter (CI/demo-safe).
 ANTHROPIC_API_KEY=""
 
 # --- Basemap tiles (Cloudflare R2) — production PMTiles hosting ---
