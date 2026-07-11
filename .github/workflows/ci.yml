@@ -67,13 +67,33 @@ jobs:
       - name: Audit hook self-test
         run: node .cursor/hooks/audit.mjs --self-test
 
+  e2e-gate:
+    name: E2E gate (Clerk test secret present?)
+    runs-on: ubuntu-latest
+    # The `secrets` context is not allowed in a job-level `if`, so this tiny
+    # gate job maps the secret into an env var, checks it, and exposes the
+    # result as an output the e2e job keys its `if` on. A missing secret must
+    # never fail CI — it only skips the e2e job.
+    outputs:
+      enabled: ${{ steps.check.outputs.enabled }}
+    steps:
+      - id: check
+        env:
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+        run: |
+          if [ -n "$CLERK_SECRET_KEY" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
   e2e:
     name: E2E (Playwright)
     runs-on: ubuntu-latest
+    needs: e2e-gate
     # Skips cleanly until real Clerk *test* keys are added as repo secrets
-    # (see docs/environment-setup.md) — a missing secret must never fail CI,
-    # only skip the job that depends on it.
-    if: ${{ secrets.CLERK_SECRET_KEY != '' }}
+    # (see docs/environment-setup.md).
+    if: ${{ needs.e2e-gate.outputs.enabled == 'true' }}
     env:
       DATABASE_URL: 'postgresql://placeholder:placeholder@localhost:5432/placeholder'
       DIRECT_URL: 'postgresql://placeholder:placeholder@localhost:5432/placeholder'
