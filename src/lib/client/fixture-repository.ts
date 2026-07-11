@@ -120,6 +120,14 @@ export function createFixtureClientBrokerRepository(
 
     createAssignment(input) {
       const now = new Date();
+      const openExists = [...assignments.values()].some(
+        (a) => a.clientId === input.clientId && a.effectiveTo === null,
+      );
+      if (openExists) {
+        return Promise.reject(
+          new Error(`Client already has an open broker assignment: ${input.clientId}`),
+        );
+      }
       const record: ClientBrokerAssignmentRecord = {
         id: input.id ?? nextId("assignment"),
         clientId: input.clientId,

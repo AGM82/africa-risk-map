@@ -156,6 +156,7 @@ model ClientBrokerAssignment {
   @@index([clientId])
   @@index([brokerOrganisationId])
   @@index([effectiveTo])
+  /// Partial unique: one open assignment per client (see migration 0012).
   @@map("client_broker_assignments")
 }
 

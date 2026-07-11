@@ -64,14 +64,51 @@ export function createClerkUserDirectory(): UserDirectory {
   return {
     async list() {
       const client = await clerkClient();
-      const { data } = await client.users.getUserList({ limit: 200 });
-      return data.map((u) => toManagedUser(u));
+      const { data: users } = await client.users.getUserList({ limit: 200 });
+      const managed = users.map((u) => toManagedUser(u));
+
+      // Pending invites are not yet Clerk users — merge so /admin/users shows them.
+      try {
+        const { data: invitations } = await client.invitations.getInvitationList({
+          status: "pending",
+          limit: 100,
+        });
+        const pending: ManagedUser[] = invitations.map((inv) => {
+          const scope = readScope(inv.publicMetadata);
+          return {
+            id: inv.id,
+            email: inv.emailAddress,
+            displayName: null,
+            role: scope.role ?? null,
+            clientId: scope.clientId ?? null,
+            brokerOrganisationId: scope.brokerOrganisationId ?? null,
+            active: true,
+            pendingInvite: true,
+          };
+        });
+        const seenEmails = new Set(managed.map((u) => u.email.toLowerCase()));
+        return [...managed, ...pending.filter((p) => !seenEmails.has(p.email.toLowerCase()))];
+      } catch {
+        return managed;
+      }
     },
 
     async getById(id) {
       const client = await clerkClient();
-      const user = await client.users.getUser(id);
-      return toManagedUser(user);
+      try {
+        const user = await client.users.getUser(id);
+        return toManagedUser(user);
+      } catch (error: unknown) {
+        if (
+          typeof error === "object" &&
+          error !== null &&
+          "status" in error &&
+          Number(Reflect.get(error, "status")) === 404
+        ) {
+          return null;
+        }
+        throw error;
+      }
     },
 
     async invite(input) {
