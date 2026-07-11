@@ -41,6 +41,9 @@ The full product/architecture plan lives at `.cursor/plans/africa-risk-map-platf
 - Spatial import loaders (pure, fixture-tested): `src/lib/spatial/loaders/`
 - Workbook import loaders (pure, fixture-tested): `src/lib/import/loaders/`
 - Workbook import pattern (docs): `docs/workbook-import.md`
+- Territory domain + fixture service: `src/lib/territory/`
+- Territory risk register (docs): `docs/territory-risk-register.md`
+- Risk map UI: `src/components/map/`, route `/map`
 - Auth context resolution: `src/lib/auth/session.ts`, `src/lib/auth/types.ts`
 - API error envelope: `src/lib/api/error-envelope.ts`
 - Route protection: `src/proxy.ts` (Next.js 16's `proxy` convention, formerly `middleware`)

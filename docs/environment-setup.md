@@ -31,12 +31,15 @@ INNGEST_SIGNING_KEY=""
 # --- AI provider (Anthropic) — wired in the policy-structure-chat / ai-news-monitor to-dos ---
 ANTHROPIC_API_KEY=""
 
-# --- Basemap tiles (Cloudflare R2) — wired in the import-scripts-data to-do ---
+# --- Basemap tiles (Cloudflare R2) — production PMTiles hosting ---
 R2_ACCOUNT_ID=""
 R2_ACCESS_KEY_ID=""
 R2_SECRET_ACCESS_KEY=""
 R2_BUCKET_NAME=""
 R2_PUBLIC_BASE_URL=""
+
+# --- MapLibre style URL (optional; defaults to Carto Dark Matter GL for local/demo) ---
+NEXT_PUBLIC_MAP_STYLE_URL="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
 ```
 
 ## Setup steps
@@ -49,3 +52,5 @@ R2_PUBLIC_BASE_URL=""
    `DATABASE_URL`/`DIRECT_URL` are set, to apply `prisma/migrations/`.
 4. Sentry, Inngest, Anthropic, and R2 keys are only required once their
    respective to-dos are implemented — leave blank until then.
+5. `NEXT_PUBLIC_MAP_STYLE_URL` is optional; omit it to use the documented
+   dark basemap default for local Risk Register map development.
