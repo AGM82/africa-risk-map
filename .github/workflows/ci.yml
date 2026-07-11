@@ -50,6 +50,16 @@ jobs:
         run: npm run test -- --coverage
       - name: Build
         run: npm run build
+      - name: Package deployable build output
+        # attest-build-provenance caps at 1024 subjects, and `.next/**` is far
+        # more than that (the traced node_modules under .next/standalone alone).
+        # Attest a single tarball of exactly what the Dockerfile ships instead:
+        # one meaningful subject that also scales as the app grows.
+        if: github.event_name == 'push'
+        run: |
+          paths=".next/standalone .next/static"
+          if [ -d public ]; then paths="$paths public"; fi
+          tar -czf next-standalone.tar.gz $paths
       - name: Attest build provenance
         # Only on push to main: a signed provenance record is only meaningful
         # for the artefact that actually ships. PR runs (fork or not) also
@@ -57,7 +67,14 @@ jobs:
         if: github.event_name == 'push'
         uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
         with:
-          subject-path: '.next/**'
+          subject-path: 'next-standalone.tar.gz'
+      - name: Upload deployable build output
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: next-standalone
+          path: next-standalone.tar.gz
+          retention-days: 14
       - name: Dependency audit
         run: npm audit --audit-level=high
       - name: Verify package signatures
