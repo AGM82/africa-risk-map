@@ -4,7 +4,7 @@ Client-scoped annual **Policy Schedule**: PaymentTerms, Policy, CoverCategory,
 BenefitLine, TerritoryBenefitEligibility, and RiskMixPolicy.
 
 Canonical domain: `src/lib/policy/`.  
-Schema: `prisma/schema.prisma` + migration `0007_policy_structure`.  
+Schema: `prisma/schema.prisma` + migrations `0007_policy_structure`, `0010_basis_of_cover`.  
 UI: `/policy` (active-client scoped).
 
 ## Benefit scales
@@ -30,10 +30,26 @@ Person-level earnings / payroll are **not** stored (POPIA). Optional `declaredAn
 
 - **PaymentTerms** — billing frequency + whether aggregate is a client-retained fund
 - **Policy** — `policyYear`, term dates, status, `benefitScale`
-- **CoverCategory** — label, PlanType, declared counts, prem/agg rates + VAT flags
+- **CoverCategory** — label, PlanType, Basis of Cover, declared counts, prem/agg
+  rates + VAT flags
 - **BenefitLine** — Death/PTD/TTD/Medical/Evac with Fixed Sum and/or Earnings fields
 - **TerritoryBenefitEligibility** — Territory × CoverCategory permitted pairs (seeded from Territory.benefitOptions × planType)
 - **RiskMixPolicy** — target Low/Med / High / Very High % + tolerance
+
+### Basis of Cover
+
+`CoverCategory.basisOfCover` is schedule wording per insured-person category:
+
+| Value                          | Label                                       |
+| ------------------------------ | ------------------------------------------- |
+| `TWENTY_FOUR_HOUR`             | 24-hour                                     |
+| `WORKING_HOURS_ONLY`           | Working hours only                          |
+| `WORKING_HOURS_INCL_COMMUTING` | Working hours only incl. commuting journeys |
+| `OTHER`                        | Other — free text in `basisOfCoverOther`    |
+
+It differs per category the same way rates and benefits do. Demo fixtures default
+to 24-hour. Displayed on `/policy` and calculator category lines; **not** a
+premium formula input unless underwriting later ties rate to basis.
 
 ## Service
 

@@ -46,6 +46,8 @@ function fixedSumCategory(
   return {
     categoryLabel: label,
     planType,
+    basisOfCover: "TWENTY_FOUR_HOUR",
+    basisOfCoverOther: null,
     declaredInsuredCount: 0,
     premiumAmount: premium ?? 0,
     premiumBasis: "PER_PERSON_PER_MONTH",
@@ -162,6 +164,8 @@ function buildEarningsDraft(text: string): DrafterResult {
       {
         categoryLabel: "Category 1 — Essential (Stated Benefits)",
         planType: "ESSENTIAL",
+        basisOfCover: "TWENTY_FOUR_HOUR",
+        basisOfCoverOther: null,
         declaredInsuredCount: 0,
         declaredAnnualWageRoll: wageRoll,
         premiumAmount: extractNumber(text, [/([\d.]+)\s*%\s*of\s*wage/i]) ?? 1.5,

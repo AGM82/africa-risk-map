@@ -18,7 +18,11 @@ A schedule may also **mix** Fixed Sum (pppm / p.a.) and Stated Benefits
 `aggregateBasis`. `Policy.benefitScale` records the dominant compensation style
 for benefit fields; premium math always follows the per-category rate basis.
 
-Rates always come from `CoverCategory` (never hard-coded ZAR).
+Rates always come from `CoverCategory` (never hard-coded ZAR).  
+Each category also carries `basisOfCover` (24-hour / working hours only /
+working hours + commuting / other free text) for schedule display — see
+[`docs/policy-structure.md`](policy-structure.md). It does not change the
+premium formula.
 
 ### Fixed Sum (GPA) — `PER_PERSON_PER_MONTH`
 

@@ -14,6 +14,8 @@ const STANDARD_PA_STRUCTURE: StructureDraftPayload = {
     {
       categoryLabel: "Category 1 — Essential Cover",
       planType: "ESSENTIAL",
+      basisOfCover: "TWENTY_FOUR_HOUR",
+      basisOfCoverOther: null,
       declaredInsuredCount: 0,
       premiumAmount: 24.06,
       premiumBasis: "PER_PERSON_PER_MONTH",
@@ -39,6 +41,8 @@ const STANDARD_PA_STRUCTURE: StructureDraftPayload = {
     {
       categoryLabel: "Category 3 — Premium Cover",
       planType: "PREMIUM",
+      basisOfCover: "TWENTY_FOUR_HOUR",
+      basisOfCoverOther: null,
       declaredInsuredCount: 0,
       premiumAmount: 77.44,
       premiumBasis: "PER_PERSON_PER_MONTH",

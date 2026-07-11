@@ -17,6 +17,8 @@ export type CategoryBookLine = Readonly<{
   coverCategoryId: string;
   categoryLabel: string;
   planType: CoverCategoryRecord["planType"];
+  basisOfCover: CoverCategoryRecord["basisOfCover"];
+  basisOfCoverOther: string | null;
   lives: number;
   /** Anonymised aggregate earnings base used for wage-roll rating (null for PPPM-only). */
   annualWageRoll: number | null;

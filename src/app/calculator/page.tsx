@@ -69,6 +69,8 @@ export default async function CalculatorPage() {
         coverCategoryId: line.coverCategoryId,
         categoryLabel: line.categoryLabel,
         planType: line.planType,
+        basisOfCover: line.basisOfCover,
+        basisOfCoverOther: line.basisOfCoverOther,
         lives: line.lives,
         annualWageRoll: line.annualWageRoll,
         premiumAmount: line.premiumAmount,

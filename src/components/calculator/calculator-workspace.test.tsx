@@ -39,6 +39,8 @@ describe("CalculatorWorkspace", () => {
               coverCategoryId: "cat-graa-essential",
               categoryLabel: "Category 1 — Essential Cover",
               planType: "ESSENTIAL",
+              basisOfCover: "TWENTY_FOUR_HOUR",
+              basisOfCoverOther: null,
               lives: 42,
               annualWageRoll: null,
               premiumAmount: 24.06,

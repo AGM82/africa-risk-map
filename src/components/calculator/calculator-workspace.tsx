@@ -9,13 +9,16 @@ import { Button } from "@/components/ui/button";
 import { confirmWhatIfAction, simulateWhatIfAction } from "@/app/calculator/actions";
 import { formatZar } from "@/lib/currency";
 import type { PlanType } from "@/lib/org-location/types";
-import type { BenefitScale, PaymentFrequency, RateBasis } from "@/lib/policy/types";
+import type { BenefitScale, BasisOfCover, PaymentFrequency, RateBasis } from "@/lib/policy/types";
+import { basisOfCoverLabel } from "@/lib/policy/types";
 import type { UserRole } from "@/lib/user-admin/types";
 
 export type BookLineView = Readonly<{
   coverCategoryId: string;
   categoryLabel: string;
   planType: PlanType;
+  basisOfCover: BasisOfCover;
+  basisOfCoverOther: string | null;
   lives: number;
   annualWageRoll: number | null;
   premiumAmount: number;
@@ -367,6 +370,7 @@ export function CalculatorWorkspace({
                     <td className="px-3 py-2">
                       <div className="font-medium">{line.categoryLabel}</div>
                       <div className="text-muted-foreground text-xs">
+                        {basisOfCoverLabel(line.basisOfCover, line.basisOfCoverOther)} ·{" "}
                         {line.premiumBasis === "PERCENT_OF_WAGE_ROLL" ? (
                           <>
                             {line.premiumAmount}% of wage roll

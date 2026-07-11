@@ -113,6 +113,8 @@ function lineForCategory(
     coverCategoryId: category.id,
     categoryLabel: category.categoryLabel,
     planType: category.planType,
+    basisOfCover: category.basisOfCover,
+    basisOfCoverOther: category.basisOfCoverOther,
     lives,
     annualWageRoll: wageRoll,
     premiumAmount: category.premiumAmount,

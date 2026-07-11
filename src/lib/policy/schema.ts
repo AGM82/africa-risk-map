@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { PLAN_TYPES } from "@/lib/org-location/types";
 import {
+  BASIS_OF_COVER,
   BENEFIT_AMOUNT_BASES,
   BENEFIT_SCALES,
   BENEFIT_TYPES,
@@ -56,9 +57,37 @@ export function assertBenefitLineMatchesScale(
   }
 }
 
-export const coverCategoryCreateSchema = z.object({
+export function refineBasisOfCoverOther(
+  cat: {
+    basisOfCover?: (typeof BASIS_OF_COVER)[number] | undefined;
+    basisOfCoverOther?: string | null | undefined;
+  },
+  ctx: z.RefinementCtx,
+): void {
+  const basis = cat.basisOfCover ?? "TWENTY_FOUR_HOUR";
+  const other = cat.basisOfCoverOther?.trim() ?? "";
+  if (basis === "OTHER" && other.length === 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["basisOfCoverOther"],
+      message: "basisOfCoverOther is required when basisOfCover is OTHER",
+    });
+  }
+  if (basis !== "OTHER" && cat.basisOfCoverOther != null && other.length > 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["basisOfCoverOther"],
+      message: "basisOfCoverOther is only allowed when basisOfCover is OTHER",
+    });
+  }
+}
+
+/** Object shape — extendable by Structure Chat drafts. */
+export const coverCategoryFieldsSchema = z.object({
   categoryLabel: z.string().trim().min(2).max(120),
   planType: z.enum(PLAN_TYPES),
+  basisOfCover: z.enum(BASIS_OF_COVER).optional(),
+  basisOfCoverOther: z.string().trim().min(1).max(240).nullable().optional(),
   declaredInsuredCount: z.number().int().min(0).max(1_000_000).optional(),
   declaredAnnualWageRoll: nonNeg.nullable().optional(),
   premiumAmount: nonNeg,
@@ -70,6 +99,9 @@ export const coverCategoryCreateSchema = z.object({
   sortOrder: z.number().int().min(0).max(100).optional(),
   benefits: z.array(benefitLineCreateSchema).optional(),
 });
+
+export const coverCategoryCreateSchema =
+  coverCategoryFieldsSchema.superRefine(refineBasisOfCoverOther);
 
 export const policyCreateSchema = z.object({
   clientId: z.string().trim().min(1),

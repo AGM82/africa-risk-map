@@ -12,6 +12,7 @@ import {
 } from "@/app/policy/actions";
 import type { PlanType } from "@/lib/org-location/types";
 import type {
+  BasisOfCover,
   BenefitAmountBasis,
   BenefitScale,
   BenefitType,
@@ -19,6 +20,7 @@ import type {
   PolicyStatus,
   RateBasis,
 } from "@/lib/policy/types";
+import { basisOfCoverLabel } from "@/lib/policy/types";
 import type { UserRole } from "@/lib/user-admin/types";
 
 export type BenefitLineView = Readonly<{
@@ -36,6 +38,8 @@ export type CategoryView = Readonly<{
   id: string;
   categoryLabel: string;
   planType: PlanType;
+  basisOfCover: BasisOfCover;
+  basisOfCoverOther: string | null;
   declaredInsuredCount: number;
   declaredAnnualWageRoll: number | null;
   premiumAmount: number;
@@ -273,9 +277,10 @@ export function PolicyWorkspace({
                       <div>
                         <h3 className="font-medium">{cat.categoryLabel}</h3>
                         <p className="text-muted-foreground text-xs">
-                          {cat.planType} · {cat.declaredInsuredCount.toLocaleString()} declared ·
-                          prem {cat.premiumAmount}{" "}
-                          {cat.premiumBasis.replaceAll("_", " ").toLowerCase()}
+                          {cat.planType} ·{" "}
+                          {basisOfCoverLabel(cat.basisOfCover, cat.basisOfCoverOther)} ·{" "}
+                          {cat.declaredInsuredCount.toLocaleString()} declared · prem{" "}
+                          {cat.premiumAmount} {cat.premiumBasis.replaceAll("_", " ").toLowerCase()}
                           {cat.premiumIncludesVat ? " incl VAT" : ""} · agg {cat.aggregateAmount}
                           {cat.aggregateExcludesVat ? " excl VAT" : ""}
                           {cat.declaredAnnualWageRoll !== null
