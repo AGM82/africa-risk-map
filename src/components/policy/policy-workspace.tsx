@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 import { AdminHeader } from "@/components/admin/admin-header";
 import { ClientSwitcher } from "@/components/admin/client-switcher";
 import { Button } from "@/components/ui/button";
-import { clonePolicyRenewalAction, upsertRiskMixAction } from "@/app/policy/actions";
+import {
+  clonePolicyRenewalAction,
+  createPolicyAction,
+  upsertRiskMixAction,
+} from "@/app/policy/actions";
 import type { PlanType } from "@/lib/org-location/types";
 import type {
   BenefitAmountBasis,
@@ -77,6 +81,11 @@ function scaleLabel(scale: BenefitScale): string {
   return scale === "FIXED_SUM" ? "Fixed Sum (GPA)" : "Earnings-Based (Stated Benefits)";
 }
 
+function formString(formData: FormData, key: string): string {
+  const value = formData.get(key);
+  return typeof value === "string" ? value : "";
+}
+
 function formatBenefit(line: BenefitLineView, scale: BenefitScale): string {
   if (
     line.benefitType === "MEDICAL" ||
@@ -117,6 +126,26 @@ export function PolicyWorkspace({
         newPolicyYear: "2026-2027",
         inceptionDate: "2026-12-01T00:00:00.000Z",
         expiryDate: "2027-11-30T00:00:00.000Z",
+      });
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      router.refresh();
+    });
+  }
+
+  function handleCreate(formData: FormData) {
+    if (!activeClientId) return;
+    setError(null);
+    const benefitScale = (formString(formData, "benefitScale") || "FIXED_SUM") as BenefitScale;
+    startTransition(async () => {
+      const result = await createPolicyAction({
+        clientId: activeClientId,
+        policyYear: formString(formData, "policyYear") || "2025-2026",
+        inceptionDate: formString(formData, "inceptionDate") || "2025-12-01T00:00:00.000Z",
+        expiryDate: formString(formData, "expiryDate") || "2026-11-30T00:00:00.000Z",
+        benefitScale,
       });
       if (!result.ok) {
         setError(result.error);
@@ -169,7 +198,42 @@ export function PolicyWorkspace({
         ) : null}
 
         {!snapshot ? (
-          <p className="text-muted-foreground text-sm">No policy schedule for this client yet.</p>
+          <section aria-labelledby="create-heading" className="space-y-3 rounded-lg border p-4">
+            <h2 id="create-heading" className="text-base font-semibold tracking-tight">
+              Create policy schedule
+            </h2>
+            <p className="text-muted-foreground text-sm">
+              No schedule for this client yet. Choose a benefit scale to seed a quoted draft.
+            </p>
+            {canWrite && activeClientId ? (
+              <form action={handleCreate} className="flex flex-wrap items-end gap-3">
+                <label className="flex flex-col gap-1 text-sm">
+                  Policy year
+                  <input
+                    name="policyYear"
+                    defaultValue="2025-2026"
+                    className="border-input bg-background w-36 rounded-md border px-2 py-1.5"
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  Benefit scale
+                  <select
+                    name="benefitScale"
+                    defaultValue="FIXED_SUM"
+                    className="border-input bg-background rounded-md border px-2 py-1.5"
+                  >
+                    <option value="FIXED_SUM">Fixed Sum (GPA)</option>
+                    <option value="EARNINGS_BASED">Earnings-Based (Stated Benefits)</option>
+                  </select>
+                </label>
+                <input type="hidden" name="inceptionDate" value="2025-12-01T00:00:00.000Z" />
+                <input type="hidden" name="expiryDate" value="2026-11-30T00:00:00.000Z" />
+                <Button type="submit" size="sm" disabled={pending}>
+                  Create quoted schedule
+                </Button>
+              </form>
+            ) : null}
+          </section>
         ) : (
           <>
             <section aria-labelledby="policy-heading" className="space-y-2 rounded-lg border p-4">
