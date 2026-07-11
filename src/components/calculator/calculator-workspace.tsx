@@ -265,6 +265,15 @@ export function CalculatorWorkspace({
   }
 
   const drift = preview?.riskMix ?? riskMix;
+  const hasWageRoll = book?.lines.some((l) => l.premiumBasis === "PERCENT_OF_WAGE_ROLL") ?? false;
+  const hasPppm = book?.lines.some((l) => l.premiumBasis !== "PERCENT_OF_WAGE_ROLL") ?? false;
+  const mixedRating = hasWageRoll && hasPppm;
+  const scaleLabel = mixedRating
+    ? "Mixed Fixed Sum + Stated Benefits"
+    : book?.benefitScale === "EARNINGS_BASED"
+      ? "Stated Benefits (earnings × rate %)"
+      : "Fixed Sum (GPA)";
+  const punchIsAnnual = hasWageRoll && !hasPppm;
 
   return (
     <div className="bg-background text-foreground flex min-h-svh flex-col">
@@ -314,23 +323,16 @@ export function CalculatorWorkspace({
                   Live book — {book.policyYear}
                 </h2>
                 <p className="text-muted-foreground text-sm">
-                  {book.benefitScale === "EARNINGS_BASED"
-                    ? "Stated Benefits (earnings × rate %)"
-                    : "Fixed Sum (GPA)"}{" "}
-                  · {book.paymentFrequency.replaceAll("_", " ").toLowerCase()}
+                  {scaleLabel} · {book.paymentFrequency.replaceAll("_", " ").toLowerCase()}
                   {book.aggregateIsClientFund ? " · aggregate is client fund" : ""}
                 </p>
               </div>
               <p className="text-right">
                 <span className="text-muted-foreground block text-xs">
-                  {book.benefitScale === "EARNINGS_BASED" ? "Annual premium" : "Monthly premium"}
+                  {punchIsAnnual ? "Annual premium" : "Monthly premium"}
                 </span>
                 <span className="text-foreground text-2xl font-bold tabular-nums">
-                  {formatZar(
-                    book.benefitScale === "EARNINGS_BASED"
-                      ? book.totalAnnualPremium
-                      : animatedPremium,
-                  )}
+                  {formatZar(punchIsAnnual ? book.totalAnnualPremium : animatedPremium)}
                 </span>
               </p>
             </div>
@@ -518,7 +520,7 @@ export function CalculatorWorkspace({
                     className="border-input bg-background w-24 rounded-md border px-2 py-1.5"
                   />
                 </label>
-                {book?.benefitScale === "EARNINGS_BASED" ? (
+                {hasWageRoll ? (
                   <label className="flex flex-col gap-1 text-sm">
                     Additional annual wage roll (optional)
                     <input

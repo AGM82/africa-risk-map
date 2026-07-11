@@ -14,11 +14,14 @@ UI: `/policy` (active-client scoped).
 | `FIXED_SUM`      | Group Personal Accident (GPA) | Nominated rand amounts (Death/PTD/TTD weekly/Medical/Evac)                                               |
 | `EARNINGS_BASED` | Stated Benefits               | Multiples of annual earnings (Death/PTD); % of weekly earnings (TTD); Medical/Evac still absolute limits |
 
-Set on `Policy.benefitScale`. Zod enforces the matching BenefitLine field set.
+Set on `Policy.benefitScale` (dominant style). Premium **rate basis** lives on each
+`CoverCategory` and may mix Fixed Sum (pppm) and Stated Benefits (wage-roll %) on
+the same policy — totals are the sum of category lines. Zod still enforces the
+matching BenefitLine field set per scale when structuring benefits.
 
 **Fixtures**
 
-- **GRAA (demo)** — Fixed Sum on-risk 2025-2026 (Essential R24.06/R35.00, Premium R77.44/R112.44)
+- **GRAA (demo)** — Fixed Sum on-risk 2025-2026 (Essential R24.06/R35.00, Premium R77.44/R112.44) — two categories, different rates, total = sum
 - **African Parks (demo)** — Earnings-Based placeholder schedule (3× Death/PTD, 100% TTD). Real AP schedule loads later.
 
 Person-level earnings / payroll are **not** stored (POPIA). Optional `declaredAnnualWageRoll` on CoverCategory is an anonymised aggregate rating input only.

@@ -231,4 +231,34 @@ describe("premium compute", () => {
     // 20M × 1.2% = 240_000; delta annual = 24_000
     expect(preview.incrementalAnnualPremium).toBeCloseTo(24_000, 2);
   });
+
+  it("sums mixed Fixed Sum and Stated Benefits category lines", () => {
+    const mixed: PolicySchedule = {
+      ...GRAA_SCHEDULE,
+      policy: { ...GRAA_SCHEDULE.policy, benefitScale: "FIXED_SUM" },
+      categories: [
+        GRAA_SCHEDULE.categories[0]!,
+        {
+          category: {
+            ...APARKS_SCHEDULE.categories[0]!.category,
+            id: "cat-mixed-wage",
+            policyId: GRAA_SCHEDULE.policy.id,
+            clientId: "client-graa",
+            categoryLabel: "Earnings staff (mixed demo)",
+            sortOrder: 1,
+          },
+          benefits: [],
+        },
+      ],
+    };
+    const book = computeBookTotals(mixed, [
+      { coverCategoryId: "cat-graa-essential", lives: 100 },
+      { coverCategoryId: "cat-mixed-wage", lives: 120 },
+    ]);
+    // 100 × 24.06 pppm + 18M × 1.2% / 12
+    expect(book.totalMonthlyPremium).toBeCloseTo(100 * 24.06 + 216_000 / 12, 2);
+    expect(book.lines).toHaveLength(2);
+    expect(book.lines[0]?.premiumBasis).toBe("PER_PERSON_PER_MONTH");
+    expect(book.lines[1]?.premiumBasis).toBe("PERCENT_OF_WAGE_ROLL");
+  });
 });

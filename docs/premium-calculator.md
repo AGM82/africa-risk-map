@@ -8,6 +8,16 @@ UI: `/calculator` (active-client scoped).
 
 ## Rating bases
 
+Rates and benefit schedules are **per CoverCategory** (insured-person category).  
+Categories on the same Policy may differ (e.g. Essential vs Premium, or staff vs
+contractors). **Total premium / aggregate = sum of the category lines** — never a
+single flat book rate.
+
+A schedule may also **mix** Fixed Sum (pppm / p.a.) and Stated Benefits
+(wage-roll %) across categories: each line uses its own `premiumBasis` /
+`aggregateBasis`. `Policy.benefitScale` records the dominant compensation style
+for benefit fields; premium math always follows the per-category rate basis.
+
 Rates always come from `CoverCategory` (never hard-coded ZAR).
 
 ### Fixed Sum (GPA) — `PER_PERSON_PER_MONTH`
@@ -52,7 +62,8 @@ The calculator always derives amounts from the schedule; adjustment _workflow_ (
 ## Live book
 
 Lives per CoverCategory = `sum(Endorsement.delta)` for the on-risk policy.  
-Wage-roll premium uses the category’s `declaredAnnualWageRoll` (plus what-if overrides).
+Wage-roll premium uses that category’s `declaredAnnualWageRoll` (plus what-if overrides).  
+Book totals sum every category line (mixed bases allowed).
 
 ## Endorsements
 
