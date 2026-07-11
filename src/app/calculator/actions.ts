@@ -21,6 +21,7 @@ export async function simulateWhatIfAction(input: {
   territoryId: string;
   coverCategoryId: string;
   headcount: number;
+  additionalAnnualWageRoll?: number;
   memberOrganisationId?: string;
   newOrganisationName?: string;
   siteName: string;
@@ -46,6 +47,7 @@ export async function confirmWhatIfAction(input: {
   territoryId: string;
   coverCategoryId: string;
   headcount: number;
+  additionalAnnualWageRoll?: number;
   memberOrganisationId?: string;
   newOrganisationName?: string;
   siteName: string;

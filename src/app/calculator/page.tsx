@@ -62,6 +62,7 @@ export default async function CalculatorPage() {
   } else if (bookResult.book) {
     book = {
       policyYear: bookResult.book.policyYear,
+      benefitScale: bookResult.book.benefitScale,
       paymentFrequency: bookResult.book.paymentFrequency,
       aggregateIsClientFund: bookResult.book.aggregateIsClientFund,
       lines: bookResult.book.lines.map((line) => ({
@@ -69,17 +70,22 @@ export default async function CalculatorPage() {
         categoryLabel: line.categoryLabel,
         planType: line.planType,
         lives: line.lives,
+        annualWageRoll: line.annualWageRoll,
         premiumAmount: line.premiumAmount,
+        premiumBasis: line.premiumBasis,
         premiumIncludesVat: line.premiumIncludesVat,
         aggregateAmount: line.aggregateAmount,
+        aggregateBasis: line.aggregateBasis,
         aggregateExcludesVat: line.aggregateExcludesVat,
         monthlyPremium: line.monthlyPremium,
         monthlyAggregate: line.monthlyAggregate,
+        annualPremium: line.annualPremium,
         annualAggregateDeductible: line.annualAggregateDeductible,
       })),
       totalLives: bookResult.book.totalLives,
       totalMonthlyPremium: bookResult.book.totalMonthlyPremium,
       totalMonthlyAggregate: bookResult.book.totalMonthlyAggregate,
+      totalAnnualPremium: bookResult.book.totalAnnualPremium,
       totalAnnualAggregateDeductible: bookResult.book.totalAnnualAggregateDeductible,
     };
     if (bookResult.riskMix) {

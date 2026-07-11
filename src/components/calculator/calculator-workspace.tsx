@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { confirmWhatIfAction, simulateWhatIfAction } from "@/app/calculator/actions";
 import { formatZar } from "@/lib/currency";
 import type { PlanType } from "@/lib/org-location/types";
-import type { PaymentFrequency } from "@/lib/policy/types";
+import type { BenefitScale, PaymentFrequency, RateBasis } from "@/lib/policy/types";
 import type { UserRole } from "@/lib/user-admin/types";
 
 export type BookLineView = Readonly<{
@@ -17,23 +17,29 @@ export type BookLineView = Readonly<{
   categoryLabel: string;
   planType: PlanType;
   lives: number;
+  annualWageRoll: number | null;
   premiumAmount: number;
+  premiumBasis: RateBasis;
   premiumIncludesVat: boolean;
   aggregateAmount: number;
+  aggregateBasis: RateBasis;
   aggregateExcludesVat: boolean;
   monthlyPremium: number;
   monthlyAggregate: number;
+  annualPremium: number;
   annualAggregateDeductible: number;
 }>;
 
 export type BookView = Readonly<{
   policyYear: string;
+  benefitScale: BenefitScale;
   paymentFrequency: PaymentFrequency;
   aggregateIsClientFund: boolean;
   lines: readonly BookLineView[];
   totalLives: number;
   totalMonthlyPremium: number;
   totalMonthlyAggregate: number;
+  totalAnnualPremium: number;
   totalAnnualAggregateDeductible: number;
 }>;
 
@@ -91,7 +97,7 @@ function formString(formData: FormData, key: string): string {
 
 function formNumber(formData: FormData, key: string): number {
   const raw = formString(formData, key);
-  const parsed = Number.parseInt(raw, 10);
+  const parsed = Number.parseFloat(raw);
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
@@ -158,6 +164,7 @@ export function CalculatorWorkspace({
   const [preview, setPreview] = useState<{
     incrementalMonthlyPremium: number;
     incrementalMonthlyAggregate: number;
+    incrementalAnnualPremium: number;
     incrementalAnnualAggregateDeductible: number;
     updatedTotalMonthlyPremium: number;
     riskMix: RiskMixView | null;
@@ -174,17 +181,23 @@ export function CalculatorWorkspace({
     if (activeClientId === null) return null;
     const memberOrganisationId = formString(formData, "memberOrganisationId");
     const newOrganisationName = formString(formData, "newOrganisationName");
+    const additionalWageRaw = formString(formData, "additionalAnnualWageRoll");
+    const additionalAnnualWageRoll =
+      additionalWageRaw.trim().length > 0
+        ? formNumber(formData, "additionalAnnualWageRoll")
+        : undefined;
     return {
       clientId: activeClientId,
       territoryId: formString(formData, "territoryId"),
       coverCategoryId: formString(formData, "coverCategoryId"),
-      headcount: formNumber(formData, "headcount"),
+      headcount: Math.trunc(formNumber(formData, "headcount")),
       siteName: formString(formData, "siteName"),
       ...(memberOrganisationId
         ? { memberOrganisationId }
         : newOrganisationName
           ? { newOrganisationName }
           : {}),
+      ...(additionalAnnualWageRoll !== undefined ? { additionalAnnualWageRoll } : {}),
       riskMgmtPlanOnFile: formBool(formData, "riskMgmtPlanOnFile"),
       crisisMgmtPlanOnFile: formBool(formData, "crisisMgmtPlanOnFile"),
       fullUnderwritingApproved: formBool(formData, "fullUnderwritingApproved"),
@@ -208,6 +221,7 @@ export function CalculatorWorkspace({
       setPreview({
         incrementalMonthlyPremium: result.data.preview.incrementalMonthlyPremium,
         incrementalMonthlyAggregate: result.data.preview.incrementalMonthlyAggregate,
+        incrementalAnnualPremium: result.data.preview.incrementalAnnualPremium,
         incrementalAnnualAggregateDeductible:
           result.data.preview.incrementalAnnualAggregateDeductible,
         updatedTotalMonthlyPremium: result.data.preview.updatedBook.totalMonthlyPremium,
@@ -281,16 +295,13 @@ export function CalculatorWorkspace({
             className="space-y-2 rounded-lg border p-4"
           >
             <h2 id="unsupported-heading" className="text-base font-semibold tracking-tight">
-              Calculator not available for this schedule
+              Calculator cannot rate this schedule
             </h2>
             <p className="text-muted-foreground text-sm">{unsupportedReason}</p>
             <p className="text-muted-foreground text-sm">
-              Earnings-based / wage-roll rating will be enabled when live Stated Benefits rates are
-              loaded. Use the{" "}
-              <Link href="/policy" className="text-foreground font-medium underline">
-                policy schedule
-              </Link>{" "}
-              for category details.
+              Stated Benefits needs an anonymised{" "}
+              <code className="text-xs">declaredAnnualWageRoll</code> on each wage-roll category.
+              Person-level payroll is never stored (POPIA).
             </p>
           </section>
         ) : null}
@@ -303,14 +314,23 @@ export function CalculatorWorkspace({
                   Live book — {book.policyYear}
                 </h2>
                 <p className="text-muted-foreground text-sm">
-                  {book.paymentFrequency.replaceAll("_", " ").toLowerCase()}
+                  {book.benefitScale === "EARNINGS_BASED"
+                    ? "Stated Benefits (earnings × rate %)"
+                    : "Fixed Sum (GPA)"}{" "}
+                  · {book.paymentFrequency.replaceAll("_", " ").toLowerCase()}
                   {book.aggregateIsClientFund ? " · aggregate is client fund" : ""}
                 </p>
               </div>
               <p className="text-right">
-                <span className="text-muted-foreground block text-xs">Monthly premium</span>
+                <span className="text-muted-foreground block text-xs">
+                  {book.benefitScale === "EARNINGS_BASED" ? "Annual premium" : "Monthly premium"}
+                </span>
                 <span className="text-foreground text-2xl font-bold tabular-nums">
-                  {formatZar(animatedPremium)}
+                  {formatZar(
+                    book.benefitScale === "EARNINGS_BASED"
+                      ? book.totalAnnualPremium
+                      : animatedPremium,
+                  )}
                 </span>
               </p>
             </div>
@@ -332,6 +352,9 @@ export function CalculatorWorkspace({
                     Monthly agg
                   </th>
                   <th scope="col" className="px-3 py-2 font-semibold">
+                    Annual premium
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-semibold">
                     Annual agg deductible
                   </th>
                 </tr>
@@ -342,10 +365,25 @@ export function CalculatorWorkspace({
                     <td className="px-3 py-2">
                       <div className="font-medium">{line.categoryLabel}</div>
                       <div className="text-muted-foreground text-xs">
-                        {formatZar(line.premiumAmount)} pppm
-                        {line.premiumIncludesVat ? " incl VAT" : ""} ·{" "}
-                        {formatZar(line.aggregateAmount)} agg
-                        {line.aggregateExcludesVat ? " excl VAT" : ""}
+                        {line.premiumBasis === "PERCENT_OF_WAGE_ROLL" ? (
+                          <>
+                            {line.premiumAmount}% of wage roll
+                            {line.annualWageRoll !== null
+                              ? ` (${formatZar(line.annualWageRoll)})`
+                              : ""}
+                            {line.premiumIncludesVat ? " incl VAT" : ""} · {line.aggregateAmount}%
+                            agg
+                            {line.aggregateExcludesVat ? " excl VAT" : ""}
+                          </>
+                        ) : (
+                          <>
+                            {formatZar(line.premiumAmount)}{" "}
+                            {line.premiumBasis === "PER_ANNUM" ? "p.a." : "pppm"}
+                            {line.premiumIncludesVat ? " incl VAT" : ""} ·{" "}
+                            {formatZar(line.aggregateAmount)} agg
+                            {line.aggregateExcludesVat ? " excl VAT" : ""}
+                          </>
+                        )}
                       </div>
                     </td>
                     <td className="px-3 py-2 tabular-nums">{line.lives.toLocaleString()}</td>
@@ -353,6 +391,7 @@ export function CalculatorWorkspace({
                       {formatZar(line.monthlyPremium)}
                     </td>
                     <td className="px-3 py-2 tabular-nums">{formatZar(line.monthlyAggregate)}</td>
+                    <td className="px-3 py-2 tabular-nums">{formatZar(line.annualPremium)}</td>
                     <td className="px-3 py-2 tabular-nums">
                       {formatZar(line.annualAggregateDeductible)}
                     </td>
@@ -365,6 +404,7 @@ export function CalculatorWorkspace({
                   <td className="px-3 py-2 tabular-nums">
                     {formatZar(book.totalMonthlyAggregate)}
                   </td>
+                  <td className="px-3 py-2 tabular-nums">{formatZar(book.totalAnnualPremium)}</td>
                   <td className="px-3 py-2 tabular-nums">
                     {formatZar(book.totalAnnualAggregateDeductible)}
                   </td>
@@ -478,6 +518,19 @@ export function CalculatorWorkspace({
                     className="border-input bg-background w-24 rounded-md border px-2 py-1.5"
                   />
                 </label>
+                {book?.benefitScale === "EARNINGS_BASED" ? (
+                  <label className="flex flex-col gap-1 text-sm">
+                    Additional annual wage roll (optional)
+                    <input
+                      name="additionalAnnualWageRoll"
+                      type="number"
+                      min={0}
+                      step={1000}
+                      placeholder="Defaults to avg earnings × headcount"
+                      className="border-input bg-background min-w-56 rounded-md border px-2 py-1.5"
+                    />
+                  </label>
+                ) : null}
               </div>
               <div className="flex flex-wrap gap-4 text-sm">
                 <label className="flex items-center gap-2">
@@ -524,6 +577,12 @@ export function CalculatorWorkspace({
                   Incremental monthly aggregate:{" "}
                   <strong className="tabular-nums">
                     {formatZar(preview.incrementalMonthlyAggregate)}
+                  </strong>
+                </p>
+                <p>
+                  Incremental annual premium:{" "}
+                  <strong className="tabular-nums">
+                    {formatZar(preview.incrementalAnnualPremium)}
                   </strong>
                 </p>
                 <p>

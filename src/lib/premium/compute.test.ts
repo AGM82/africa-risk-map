@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
-  UnsupportedRateBasisError,
+  MissingWageRollError,
   computeBookTotals,
   computeWhatIf,
+  percentOfWageRoll,
+  projectAdditionalWageRoll,
   rollupLivesByCoverCategory,
 } from "@/lib/premium/compute";
 import type { PolicySchedule } from "@/lib/policy/types";
@@ -78,6 +80,56 @@ const GRAA_SCHEDULE: PolicySchedule = {
   ],
 };
 
+const APARKS_SCHEDULE: PolicySchedule = {
+  policy: {
+    id: "policy-aparks-2025-26",
+    clientId: "client-aparks",
+    policyYear: "2025-2026",
+    inceptionDate: new Date("2025-12-01T00:00:00.000Z"),
+    expiryDate: new Date("2026-11-30T00:00:00.000Z"),
+    status: "ON_RISK",
+    benefitScale: "EARNINGS_BASED",
+    paymentTermsId: "pay-aparks-monthly",
+    underwriterUserId: null,
+    brokerOrganisationId: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  paymentTerms: {
+    id: "pay-aparks-monthly",
+    clientId: "client-aparks",
+    frequency: "MONTHLY_BY_NUMBERS",
+    depositMinPremium: null,
+    adjustmentCadenceMonths: 6,
+    aggregateIsClientFund: false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  categories: [
+    {
+      category: {
+        id: "cat-aparks-staff",
+        policyId: "policy-aparks-2025-26",
+        clientId: "client-aparks",
+        categoryLabel: "All Staff — Stated Benefits (demo)",
+        planType: "PREMIUM",
+        declaredInsuredCount: 120,
+        declaredAnnualWageRoll: 18_000_000,
+        premiumAmount: 1.2,
+        premiumBasis: "PERCENT_OF_WAGE_ROLL",
+        premiumIncludesVat: true,
+        aggregateAmount: 0.8,
+        aggregateBasis: "PERCENT_OF_WAGE_ROLL",
+        aggregateExcludesVat: true,
+        sortOrder: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      benefits: [],
+    },
+  ],
+};
+
 describe("premium compute", () => {
   it("reconciles GRAA ledger book totals (6503 Essential / 14 Premium)", () => {
     const book = computeBookTotals(GRAA_SCHEDULE, [
@@ -89,6 +141,37 @@ describe("premium compute", () => {
     expect(book.totalMonthlyAggregate).toBeCloseTo(6503 * 35 + 14 * 112.44, 2);
     expect(book.totalAnnualAggregateDeductible).toBeCloseTo(book.totalMonthlyAggregate * 12, 2);
     expect(book.lines[0]?.monthlyPremium).toBeCloseTo(156_462.18, 2);
+  });
+
+  it("applies Stated Benefits math: earnings × rate% = premium", () => {
+    expect(percentOfWageRoll(18_000_000, 1.2)).toBeCloseTo(216_000, 2);
+    const book = computeBookTotals(APARKS_SCHEDULE, [
+      { coverCategoryId: "cat-aparks-staff", lives: 120 },
+    ]);
+    expect(book.benefitScale).toBe("EARNINGS_BASED");
+    expect(book.totalAnnualPremium).toBeCloseTo(216_000, 2);
+    expect(book.totalAnnualAggregateDeductible).toBeCloseTo(144_000, 2);
+    expect(book.totalMonthlyPremium).toBeCloseTo(216_000 / 12, 2);
+    expect(book.totalMonthlyAggregate).toBeCloseTo(144_000 / 12, 2);
+    expect(book.lines[0]?.annualWageRoll).toBe(18_000_000);
+  });
+
+  it("requires wage roll for PERCENT_OF_WAGE_ROLL", () => {
+    const missing: PolicySchedule = {
+      ...APARKS_SCHEDULE,
+      categories: [
+        {
+          category: {
+            ...APARKS_SCHEDULE.categories[0]!.category,
+            declaredAnnualWageRoll: null,
+          },
+          benefits: [],
+        },
+      ],
+    };
+    expect(() =>
+      computeBookTotals(missing, [{ coverCategoryId: "cat-aparks-staff", lives: 10 }]),
+    ).toThrow(MissingWageRollError);
   });
 
   it("rolls up endorsement deltas by cover category", () => {
@@ -106,7 +189,7 @@ describe("premium compute", () => {
     );
   });
 
-  it("computes what-if incremental premium", () => {
+  it("computes what-if incremental premium for PPPM", () => {
     const preview = computeWhatIf(
       GRAA_SCHEDULE,
       [
@@ -122,31 +205,30 @@ describe("premium compute", () => {
     ).toBe(52);
   });
 
-  it("rejects earnings-based schedules", () => {
-    const earnings: PolicySchedule = {
-      ...GRAA_SCHEDULE,
-      policy: { ...GRAA_SCHEDULE.policy, benefitScale: "EARNINGS_BASED" },
-    };
-    expect(() => computeBookTotals(earnings, [])).toThrow(UnsupportedRateBasisError);
+  it("projects wage-roll what-if from average earnings × headcount", () => {
+    const cat = APARKS_SCHEDULE.categories[0]!.category;
+    // 18M / 120 = 150_000 average; +10 lives → +1.5M wage roll
+    expect(projectAdditionalWageRoll(cat, 10)).toBeCloseTo(1_500_000, 2);
+    const preview = computeWhatIf(
+      APARKS_SCHEDULE,
+      [{ coverCategoryId: "cat-aparks-staff", lives: 120 }],
+      "cat-aparks-staff",
+      10,
+    );
+    // New wage 19.5M × 1.2% = 234_000 annual; was 216_000 → +18_000 annual / 12 monthly
+    expect(preview.incrementalAnnualPremium).toBeCloseTo(18_000, 2);
+    expect(preview.incrementalMonthlyPremium).toBeCloseTo(18_000 / 12, 2);
   });
 
-  it("rejects non-PPPM rate bases", () => {
-    const wageRoll: PolicySchedule = {
-      ...GRAA_SCHEDULE,
-      policy: { ...GRAA_SCHEDULE.policy, benefitScale: "FIXED_SUM" },
-      categories: [
-        {
-          category: {
-            ...GRAA_SCHEDULE.categories[0]!.category,
-            premiumBasis: "PERCENT_OF_WAGE_ROLL",
-            aggregateBasis: "PERCENT_OF_WAGE_ROLL",
-          },
-          benefits: [],
-        },
-      ],
-    };
-    expect(() =>
-      computeBookTotals(wageRoll, [{ coverCategoryId: "cat-graa-essential", lives: 10 }]),
-    ).toThrow(UnsupportedRateBasisError);
+  it("accepts explicit additional annual wage roll on what-if", () => {
+    const preview = computeWhatIf(
+      APARKS_SCHEDULE,
+      [{ coverCategoryId: "cat-aparks-staff", lives: 120 }],
+      "cat-aparks-staff",
+      5,
+      2_000_000,
+    );
+    // 20M × 1.2% = 240_000; delta annual = 24_000
+    expect(preview.incrementalAnnualPremium).toBeCloseTo(24_000, 2);
   });
 });

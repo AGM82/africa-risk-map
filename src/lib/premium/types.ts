@@ -6,11 +6,20 @@ export type CategoryLives = Readonly<{
   lives: number;
 }>;
 
+/** Optional wage-roll override when projecting what-if / adjusted earnings. */
+export type CategoryRatingInput = Readonly<{
+  coverCategoryId: string;
+  lives: number;
+  annualWageRoll?: number | null;
+}>;
+
 export type CategoryBookLine = Readonly<{
   coverCategoryId: string;
   categoryLabel: string;
   planType: CoverCategoryRecord["planType"];
   lives: number;
+  /** Anonymised aggregate earnings base used for wage-roll rating (null for PPPM-only). */
+  annualWageRoll: number | null;
   premiumAmount: number;
   premiumBasis: CoverCategoryRecord["premiumBasis"];
   premiumIncludesVat: boolean;
@@ -19,24 +28,28 @@ export type CategoryBookLine = Readonly<{
   aggregateExcludesVat: boolean;
   monthlyPremium: number;
   monthlyAggregate: number;
+  annualPremium: number;
   annualAggregateDeductible: number;
 }>;
 
 export type BookTotals = Readonly<{
   policyId: string;
   policyYear: string;
+  benefitScale: PolicySchedule["policy"]["benefitScale"];
   paymentFrequency: PolicySchedule["paymentTerms"]["frequency"];
   aggregateIsClientFund: boolean;
   lines: readonly CategoryBookLine[];
   totalLives: number;
   totalMonthlyPremium: number;
   totalMonthlyAggregate: number;
+  totalAnnualPremium: number;
   totalAnnualAggregateDeductible: number;
 }>;
 
 export type WhatIfPreview = Readonly<{
   incrementalMonthlyPremium: number;
   incrementalMonthlyAggregate: number;
+  incrementalAnnualPremium: number;
   incrementalAnnualAggregateDeductible: number;
   updatedBook: BookTotals;
 }>;

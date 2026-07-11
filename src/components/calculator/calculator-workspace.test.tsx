@@ -31,6 +31,7 @@ describe("CalculatorWorkspace", () => {
         canWrite
         book={{
           policyYear: "2025-2026",
+          benefitScale: "FIXED_SUM",
           paymentFrequency: "MONTHLY_BY_NUMBERS",
           aggregateIsClientFund: true,
           lines: [
@@ -39,18 +40,23 @@ describe("CalculatorWorkspace", () => {
               categoryLabel: "Category 1 — Essential Cover",
               planType: "ESSENTIAL",
               lives: 42,
+              annualWageRoll: null,
               premiumAmount: 24.06,
+              premiumBasis: "PER_PERSON_PER_MONTH",
               premiumIncludesVat: true,
               aggregateAmount: 35,
+              aggregateBasis: "PER_PERSON_PER_MONTH",
               aggregateExcludesVat: true,
               monthlyPremium: 1010.52,
               monthlyAggregate: 1470,
+              annualPremium: 12_126.24,
               annualAggregateDeductible: 17_640,
             },
           ],
           totalLives: 42,
           totalMonthlyPremium: 1010.52,
           totalMonthlyAggregate: 1470,
+          totalAnnualPremium: 12_126.24,
           totalAnnualAggregateDeductible: 17_640,
         }}
         riskMix={{

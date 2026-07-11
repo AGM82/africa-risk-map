@@ -111,10 +111,14 @@ describe("premium calculator service", () => {
     expect(result.book.totalMonthlyPremium).toBeCloseTo(42 * 24.06 + 18 * 77.44, 2);
   });
 
-  it("returns unsupported for African Parks earnings schedule", async () => {
+  it("returns African Parks book from declared wage roll × rate%", async () => {
     const { premium } = build();
     const result = await premium.getBook(insurer, "client-aparks");
-    expect(result.unsupported).toBe(true);
+    expect(result.unsupported).toBe(false);
+    if (result.unsupported) return;
+    expect(result.book.benefitScale).toBe("EARNINGS_BASED");
+    expect(result.book.totalAnnualPremium).toBeCloseTo(216_000, 2);
+    expect(result.book.totalMonthlyPremium).toBeCloseTo(18_000, 2);
   });
 
   it("simulates what-if for Essential add in South Africa", async () => {

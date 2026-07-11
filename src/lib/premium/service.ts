@@ -10,6 +10,7 @@ import type {
 import type { PolicyService } from "@/lib/policy/service";
 import type { PolicySchedule } from "@/lib/policy/types";
 import {
+  MissingWageRollError,
   NoActivePolicyError,
   UnsupportedRateBasisError,
   computeBookTotals,
@@ -159,7 +160,7 @@ export function createPremiumCalculatorService(
           unsupported: false,
         };
       } catch (err) {
-        if (err instanceof UnsupportedRateBasisError) {
+        if (err instanceof UnsupportedRateBasisError || err instanceof MissingWageRollError) {
           return {
             schedule,
             book: null,
@@ -218,7 +219,13 @@ export function createPremiumCalculatorService(
 
       const endorsements = await orgLocations.listEndorsementsForPolicy(schedule.policy.id);
       const lives = rollupLivesByCoverCategory(endorsements);
-      const preview = computeWhatIf(schedule, lives, input.coverCategoryId, input.headcount);
+      const preview = computeWhatIf(
+        schedule,
+        lives,
+        input.coverCategoryId,
+        input.headcount,
+        input.additionalAnnualWageRoll,
+      );
 
       const locations = await orgLocations.listLocationsForClient(input.clientId);
       const projected = withWhatIfLocation(
@@ -334,4 +341,9 @@ export function createPremiumCalculatorService(
 
 export type PremiumCalculatorService = ReturnType<typeof createPremiumCalculatorService>;
 
-export { CoverCategoryNotEligibleError, NoActivePolicyError, UnsupportedRateBasisError };
+export {
+  CoverCategoryNotEligibleError,
+  MissingWageRollError,
+  NoActivePolicyError,
+  UnsupportedRateBasisError,
+};

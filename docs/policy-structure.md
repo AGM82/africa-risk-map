@@ -38,8 +38,7 @@ Person-level earnings / payroll are **not** stored (POPIA). Optional `declaredAn
 
 ## Out of scope
 
-- Live Neon migrate deploy / real African Parks schedule figures
-- Earnings-based calculator path (see [`docs/premium-calculator.md`](premium-calculator.md))
+- Live Neon migrate deploy / real African Parks production schedule figures (demo placeholder rates only until live load)
 
-Endorsement / premium engine: see [`docs/premium-calculator.md`](premium-calculator.md).  
+Endorsement / premium engine (incl. Stated Benefits wage-roll math): see [`docs/premium-calculator.md`](premium-calculator.md).  
 Structure Chat / PolicyTemplate: see [`docs/structure-chat.md`](structure-chat.md).
