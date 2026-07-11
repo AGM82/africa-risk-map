@@ -50,6 +50,8 @@ function normalizeBenefit(ben: {
 function normalizeCategory(cat: {
   categoryLabel: string;
   planType: CoverCategoryCreateInput["planType"];
+  basisOfCover?: CoverCategoryCreateInput["basisOfCover"];
+  basisOfCoverOther?: string | null;
   declaredInsuredCount?: number;
   declaredAnnualWageRoll?: number | null;
   premiumAmount: number;
@@ -78,6 +80,8 @@ function normalizeCategory(cat: {
     premiumBasis: cat.premiumBasis,
     aggregateAmount: cat.aggregateAmount,
     aggregateBasis: cat.aggregateBasis,
+    ...(cat.basisOfCover !== undefined ? { basisOfCover: cat.basisOfCover } : {}),
+    ...(cat.basisOfCoverOther !== undefined ? { basisOfCoverOther: cat.basisOfCoverOther } : {}),
     ...(cat.declaredInsuredCount !== undefined
       ? { declaredInsuredCount: cat.declaredInsuredCount }
       : {}),

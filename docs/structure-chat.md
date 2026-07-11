@@ -39,5 +39,5 @@ data in prompts — schedule terms only.
 
 - File/document upload
 - Playwright E2E for Structure Chat
-- Premium calculator / Endorsements
+- Premium calculator / Endorsements → [`docs/premium-calculator.md`](premium-calculator.md)
 - Live Neon migrate deploy

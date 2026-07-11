@@ -47,7 +47,6 @@ Fixture repository: `createFixtureOrgLocationRepository(ORG_LOCATION_FIXTURES)`.
 
 ## Out of scope here
 
-- Policy / CoverCategory FK wiring → policy-structure to-dos
 - Recalibration against ledger baselines → `docs/recalibration.md`
-- Endorsement ledger → premium-calculator
+- Endorsement ledger & premium engine → [`docs/premium-calculator.md`](premium-calculator.md)
 - Map pin overlay for org locations → future map integration

@@ -1,4 +1,6 @@
 import type {
+  EndorsementCreateInput,
+  EndorsementRecord,
   MemberOrganisationCreateInput,
   MemberOrganisationRecord,
   MemberOrganisationUpdateInput,
@@ -8,7 +10,7 @@ import type {
 } from "@/lib/org-location/types";
 
 /**
- * Persistence port for member organisations and their territory locations.
+ * Persistence port for member organisations, locations, and endorsements.
  * Fixture adapter today; Prisma adapter when Neon is live.
  */
 export type OrgLocationRepository = {
@@ -32,4 +34,8 @@ export type OrgLocationRepository = {
     id: string,
     input: OrganisationLocationUpdateInput,
   ): Promise<OrganisationLocationRecord | null>;
+
+  listEndorsementsForClient(clientId: string): Promise<EndorsementRecord[]>;
+  listEndorsementsForPolicy(policyId: string): Promise<EndorsementRecord[]>;
+  createEndorsement(input: EndorsementCreateInput & { id?: string }): Promise<EndorsementRecord>;
 };

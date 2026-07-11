@@ -10,6 +10,29 @@ export type BenefitScale = (typeof BENEFIT_SCALES)[number];
 export const RATE_BASES = ["PER_PERSON_PER_MONTH", "PER_ANNUM", "PERCENT_OF_WAGE_ROLL"] as const;
 export type RateBasis = (typeof RATE_BASES)[number];
 
+export const BASIS_OF_COVER = [
+  "TWENTY_FOUR_HOUR",
+  "WORKING_HOURS_ONLY",
+  "WORKING_HOURS_INCL_COMMUTING",
+  "OTHER",
+] as const;
+export type BasisOfCover = (typeof BASIS_OF_COVER)[number];
+
+export function basisOfCoverLabel(value: BasisOfCover, otherText?: string | null): string {
+  switch (value) {
+    case "TWENTY_FOUR_HOUR":
+      return "24-hour";
+    case "WORKING_HOURS_ONLY":
+      return "Working hours only";
+    case "WORKING_HOURS_INCL_COMMUTING":
+      return "Working hours only incl. commuting journeys";
+    case "OTHER": {
+      const trimmed = otherText?.trim();
+      return trimmed ? `Other — ${trimmed}` : "Other";
+    }
+  }
+}
+
 export const BENEFIT_TYPES = ["DEATH", "PTD", "TTD", "MEDICAL", "EVACUATION"] as const;
 export type BenefitType = (typeof BENEFIT_TYPES)[number];
 
@@ -55,6 +78,8 @@ export type CoverCategoryRecord = Readonly<{
   clientId: string;
   categoryLabel: string;
   planType: PlanType;
+  basisOfCover: BasisOfCover;
+  basisOfCoverOther: string | null;
   declaredInsuredCount: number;
   declaredAnnualWageRoll: number | null;
   premiumAmount: number;
@@ -140,6 +165,9 @@ export type BenefitLineCreateInput = Readonly<{
 export type CoverCategoryCreateInput = Readonly<{
   categoryLabel: string;
   planType: PlanType;
+  basisOfCover?: BasisOfCover;
+  /** Required when basisOfCover is OTHER. */
+  basisOfCoverOther?: string | null;
   declaredInsuredCount?: number;
   declaredAnnualWageRoll?: number | null;
   premiumAmount: number;

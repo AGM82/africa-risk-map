@@ -8,6 +8,7 @@ import { createOrgLocationService } from "@/lib/org-location/service";
 import { createFixturePolicyRepository } from "@/lib/policy/fixture-repository";
 import { POLICY_FIXTURES } from "@/lib/policy/fixtures";
 import { createPolicyService } from "@/lib/policy/service";
+import { createPremiumCalculatorService } from "@/lib/premium/service";
 import { createFixtureRecalibrationRepository } from "@/lib/recalibration/fixture-repository";
 import { RECALIBRATION_FIXTURES } from "@/lib/recalibration/fixtures";
 import { createRecalibrationService } from "@/lib/recalibration/service";
@@ -36,20 +37,30 @@ function buildFixtureAdminServices() {
   const territoryRepo = createFixtureTerritoryRepository(TERRITORY_FIXTURES);
   const orgLocationRepo = createFixtureOrgLocationRepository(ORG_LOCATION_FIXTURES);
   const orgLocation = createOrgLocationService(orgLocationRepo, territoryRepo, clientBroker, audit);
+  const policyRepo = createFixturePolicyRepository(POLICY_FIXTURES);
+  const policy = createPolicyService(policyRepo, clientBroker, audit, async () => {
+    const territories = await territoryRepo.list();
+    return territories.map((t) => ({ id: t.id, benefitOptions: t.benefitOptions }));
+  });
   const recalibration = createRecalibrationService(
     createFixtureRecalibrationRepository(RECALIBRATION_FIXTURES),
     orgLocationRepo,
     clientBroker,
     audit,
+    {
+      getOnRiskPolicyId: async (clientId) => {
+        const active = await policyRepo.getActivePolicy(clientId);
+        return active?.id ?? null;
+      },
+    },
   );
-  const policy = createPolicyService(
-    createFixturePolicyRepository(POLICY_FIXTURES),
+  const premium = createPremiumCalculatorService(
+    orgLocationRepo,
+    territoryRepo,
+    policy,
+    recalibration,
     clientBroker,
     audit,
-    async () => {
-      const territories = await territoryRepo.list();
-      return territories.map((t) => ({ id: t.id, benefitOptions: t.benefitOptions }));
-    },
   );
   const structureChat = createStructureChatService(
     createFixtureStructureChatRepository(STRUCTURE_CHAT_FIXTURES),
@@ -63,7 +74,16 @@ function buildFixtureAdminServices() {
     clientBroker,
     audit,
   );
-  return { audit, clientBroker, orgLocation, recalibration, policy, structureChat, userAdmin };
+  return {
+    audit,
+    clientBroker,
+    orgLocation,
+    recalibration,
+    policy,
+    premium,
+    structureChat,
+    userAdmin,
+  };
 }
 
 /**

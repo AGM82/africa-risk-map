@@ -2,7 +2,8 @@ import { z } from "zod";
 import {
   assertBenefitLineMatchesScale,
   benefitLineCreateSchema,
-  coverCategoryCreateSchema,
+  coverCategoryFieldsSchema,
+  refineBasisOfCoverOther,
 } from "@/lib/policy/schema";
 import { BENEFIT_SCALES, PAYMENT_FREQUENCIES } from "@/lib/policy/types";
 import {
@@ -20,9 +21,11 @@ const isoDate = z
 
 export const structureDraftBenefitSchema = benefitLineCreateSchema;
 
-export const structureDraftCategorySchema = coverCategoryCreateSchema.extend({
-  benefits: z.array(structureDraftBenefitSchema).min(1),
-});
+export const structureDraftCategorySchema = coverCategoryFieldsSchema
+  .extend({
+    benefits: z.array(structureDraftBenefitSchema).min(1),
+  })
+  .superRefine(refineBasisOfCoverOther);
 
 export const structureDraftPayloadSchema = z.object({
   benefitScale: z.enum(BENEFIT_SCALES),
@@ -85,6 +88,8 @@ function normalizeCategory(
     aggregateAmount: cat.aggregateAmount,
     aggregateBasis: cat.aggregateBasis,
     benefits: cat.benefits.map(normalizeBenefit),
+    ...(cat.basisOfCover !== undefined ? { basisOfCover: cat.basisOfCover } : {}),
+    ...(cat.basisOfCoverOther !== undefined ? { basisOfCoverOther: cat.basisOfCoverOther } : {}),
     ...(cat.declaredInsuredCount !== undefined
       ? { declaredInsuredCount: cat.declaredInsuredCount }
       : {}),

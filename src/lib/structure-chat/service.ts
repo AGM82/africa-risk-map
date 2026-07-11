@@ -71,6 +71,8 @@ function toCategoryInputs(draft: StructureDraftPayload): CoverCategoryCreateInpu
   return draft.categories.map((cat, index) => ({
     categoryLabel: cat.categoryLabel,
     planType: cat.planType,
+    ...(cat.basisOfCover !== undefined ? { basisOfCover: cat.basisOfCover } : {}),
+    ...(cat.basisOfCoverOther !== undefined ? { basisOfCoverOther: cat.basisOfCoverOther } : {}),
     declaredInsuredCount: cat.declaredInsuredCount ?? 0,
     ...(cat.declaredAnnualWageRoll !== undefined
       ? { declaredAnnualWageRoll: cat.declaredAnnualWageRoll }
@@ -159,6 +161,8 @@ export function createStructureChatService(
           categories: schedule.categories.map(({ category, benefits }) => ({
             categoryLabel: category.categoryLabel,
             planType: category.planType,
+            basisOfCover: category.basisOfCover,
+            basisOfCoverOther: category.basisOfCoverOther,
             declaredInsuredCount: category.declaredInsuredCount,
             declaredAnnualWageRoll: category.declaredAnnualWageRoll,
             premiumAmount: category.premiumAmount,

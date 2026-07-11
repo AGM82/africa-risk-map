@@ -63,6 +63,8 @@ export default async function PolicyPage() {
         id: category.id,
         categoryLabel: category.categoryLabel,
         planType: category.planType,
+        basisOfCover: category.basisOfCover,
+        basisOfCoverOther: category.basisOfCoverOther,
         declaredInsuredCount: category.declaredInsuredCount,
         declaredAnnualWageRoll: category.declaredAnnualWageRoll,
         premiumAmount: category.premiumAmount,

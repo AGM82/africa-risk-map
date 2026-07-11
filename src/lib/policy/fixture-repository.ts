@@ -102,6 +102,11 @@ export function createFixturePolicyRepository(seed: PolicySeed = {}): PolicyRepo
           clientId: input.clientId,
           categoryLabel: cat.categoryLabel,
           planType: cat.planType,
+          basisOfCover: cat.basisOfCover ?? "TWENTY_FOUR_HOUR",
+          basisOfCoverOther:
+            (cat.basisOfCover ?? "TWENTY_FOUR_HOUR") === "OTHER"
+              ? (cat.basisOfCoverOther?.trim() ?? null)
+              : null,
           declaredInsuredCount: cat.declaredInsuredCount ?? 0,
           declaredAnnualWageRoll: cat.declaredAnnualWageRoll ?? null,
           premiumAmount: cat.premiumAmount,
@@ -182,6 +187,11 @@ export function createFixturePolicyRepository(seed: PolicySeed = {}): PolicyRepo
         clientId: input.clientId,
         categoryLabel: input.categoryLabel,
         planType: input.planType,
+        basisOfCover: input.basisOfCover ?? "TWENTY_FOUR_HOUR",
+        basisOfCoverOther:
+          (input.basisOfCover ?? "TWENTY_FOUR_HOUR") === "OTHER"
+            ? (input.basisOfCoverOther?.trim() ?? null)
+            : null,
         declaredInsuredCount: input.declaredInsuredCount ?? 0,
         declaredAnnualWageRoll: input.declaredAnnualWageRoll ?? null,
         premiumAmount: input.premiumAmount,

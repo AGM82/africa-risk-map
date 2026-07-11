@@ -15,6 +15,8 @@ const SYSTEM = `You translate personal-accident policy schedule descriptions int
   "categories": [{
     "categoryLabel": string,
     "planType": "ESSENTIAL" | "PREMIUM",
+    "basisOfCover": "TWENTY_FOUR_HOUR" | "WORKING_HOURS_ONLY" | "WORKING_HOURS_INCL_COMMUTING" | "OTHER",
+    "basisOfCoverOther": string | null,  // required free text when basisOfCover is OTHER
     "premiumAmount": number,
     "premiumBasis": "PER_PERSON_PER_MONTH" | "PER_ANNUM" | "PERCENT_OF_WAGE_ROLL",
     "aggregateAmount": number,
@@ -23,7 +25,7 @@ const SYSTEM = `You translate personal-accident policy schedule descriptions int
   }],
   "uncertainFields": string[]  // JSON paths for values you could not determine
 }
-Rules: never invent insured-person names or payroll. FIXED_SUM uses fixedAmount; EARNINGS_BASED Death/PTD use earningsMultiple; TTD uses percentOfEarnings; Medical/Evacuation always fixedAmount. Return ONLY JSON.`;
+Rules: never invent insured-person names or payroll. FIXED_SUM uses fixedAmount; EARNINGS_BASED Death/PTD use earningsMultiple; TTD uses percentOfEarnings; Medical/Evacuation always fixedAmount. Default basisOfCover to TWENTY_FOUR_HOUR unless the schedule says otherwise; use WORKING_HOURS_INCL_COMMUTING when commuting is included; use OTHER only with basisOfCoverOther free text. Return ONLY JSON.`;
 
 /**
  * Anthropic-backed drafter. Falls back to the fixture drafter when the API key

@@ -18,7 +18,7 @@ export default async function OrganisationsPage() {
     redirect("/");
   }
 
-  const { clientBroker, orgLocation } = createFixtureAdminServices();
+  const { clientBroker, orgLocation, policy } = createFixtureAdminServices();
   const cookieStore = await cookies();
   const scope = await resolveTenantScope(
     auth,
@@ -36,6 +36,7 @@ export default async function OrganisationsPage() {
         switcherOptions={[]}
         rows={[]}
         territories={[]}
+        coverCategories={[]}
         canWrite={auth.role !== "CLIENT"}
       />
     );
@@ -49,6 +50,15 @@ export default async function OrganisationsPage() {
   const territoryRepo = createFixtureTerritoryRepository(TERRITORY_FIXTURES);
   const territories = await territoryRepo.list();
   const territoryById = new Map(territories.map((t) => [t.id, t]));
+  const schedule = await policy.getActiveSchedule(auth, scope.activeClientId);
+  const categoryById = new Map(
+    (schedule?.categories ?? []).map(({ category }) => [category.id, category]),
+  );
+  const coverCategories = (schedule?.categories ?? []).map(({ category }) => ({
+    id: category.id,
+    label: category.categoryLabel,
+    planType: category.planType,
+  }));
 
   const rows: OrganisationRowView[] = withLocations.map(({ organisation, locations }) => ({
     id: organisation.id,
@@ -60,6 +70,7 @@ export default async function OrganisationsPage() {
     fullUnderwritingApproved: organisation.fullUnderwritingApproved,
     locations: locations.map((loc) => {
       const territory = territoryById.get(loc.territoryId);
+      const category = loc.coverCategoryId ? categoryById.get(loc.coverCategoryId) : undefined;
       return {
         id: loc.id,
         siteName: loc.siteName,
@@ -68,6 +79,7 @@ export default async function OrganisationsPage() {
           : loc.territoryId,
         headcount: loc.headcount,
         assignedPlanType: loc.assignedPlanType,
+        coverCategoryLabel: category?.categoryLabel ?? null,
       };
     }),
   }));
@@ -91,6 +103,7 @@ export default async function OrganisationsPage() {
         riskCategory: t.riskCategory,
         benefitOptions: t.benefitOptions,
       }))}
+      coverCategories={coverCategories}
       canWrite={auth.role !== "CLIENT"}
     />
   );

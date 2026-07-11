@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { MEMBER_ORG_STATUSES, PLAN_TYPES } from "@/lib/org-location/types";
+import { ENDORSEMENT_KINDS, MEMBER_ORG_STATUSES, PLAN_TYPES } from "@/lib/org-location/types";
 
 const nameField = z.string().trim().min(2).max(120);
 const siteNameField = z.string().trim().min(2).max(120);
@@ -63,3 +63,35 @@ export const organisationLocationUpdateSchema = z
       v.coverCategoryId !== undefined,
     { message: "Provide at least one field to update" },
   );
+
+export const endorsementCreateSchema = z
+  .object({
+    clientId: clientIdField,
+    organisationLocationId: idField,
+    coverCategoryId: idField,
+    policyId: idField,
+    delta: z
+      .number()
+      .int()
+      .refine((n) => n !== 0, { message: "delta must be non-zero" }),
+    effectiveDate: z.coerce.date(),
+    note: z.string().trim().max(500).nullable().optional(),
+    kind: z.enum(ENDORSEMENT_KINDS),
+    createdByUserId: idField,
+  })
+  .superRefine((v, ctx) => {
+    if (v.kind === "REMOVE" && v.delta >= 0) {
+      ctx.addIssue({
+        code: "custom",
+        message: "REMOVE endorsements require a negative delta",
+        path: ["delta"],
+      });
+    }
+    if ((v.kind === "ADD" || v.kind === "BASELINE") && v.delta <= 0) {
+      ctx.addIssue({
+        code: "custom",
+        message: `${v.kind} endorsements require a positive delta`,
+        path: ["delta"],
+      });
+    }
+  });

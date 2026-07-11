@@ -1,5 +1,6 @@
 import type { PlanType } from "@/lib/org-location/types";
 import type {
+  BasisOfCover,
   BenefitAmountBasis,
   BenefitScale,
   BenefitType,
@@ -36,6 +37,9 @@ export type StructureDraftBenefit = Readonly<{
 export type StructureDraftCategory = Readonly<{
   categoryLabel: string;
   planType: PlanType;
+  basisOfCover?: BasisOfCover;
+  /** Required when basisOfCover is OTHER. */
+  basisOfCoverOther?: string | null;
   declaredInsuredCount?: number;
   declaredAnnualWageRoll?: number | null;
   premiumAmount: number;

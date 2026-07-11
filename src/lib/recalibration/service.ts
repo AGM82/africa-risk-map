@@ -41,15 +41,22 @@ export class RecalibrationAlreadyLockedError extends Error {
 
 const DEFAULT_BASELINES: PlanTypeBaselines = { ESSENTIAL: 0, PREMIUM: 0 };
 
+export type RecalibrationLockHooks = Readonly<{
+  /** Active on-risk policy id for the client, or null if none. */
+  getOnRiskPolicyId: (clientId: string) => Promise<string | null>;
+}>;
+
 /**
  * Client-scoped recalibration service. Reads via ClientBrokerService access;
- * writes/lock for INSURER_ADMIN and BROKER only. Lock requires exact balance.
+ * writes/lock for INSURER_ADMIN and BROKER only. Lock requires exact balance
+ * and bootstraps BASELINE endorsements for locations with a cover category.
  */
 export function createRecalibrationService(
   repo: RecalibrationRepository,
   orgLocations: OrgLocationRepository,
   clientBroker: ClientBrokerService,
   audit: AuditWriter,
+  lockHooks?: RecalibrationLockHooks,
 ) {
   async function assertClientAccess(auth: AuthContext, clientId: string): Promise<void> {
     await clientBroker.assertCanAccessClient(auth, clientId);
@@ -67,6 +74,40 @@ export function createRecalibrationService(
     const locations = await orgLocations.listLocationsForClient(batch.clientId);
     const progress = reconcile(locations, batch.baselines);
     return { batch, progress };
+  }
+
+  async function bootstrapBaselineEndorsements(auth: AuthContext, clientId: string): Promise<void> {
+    if (!lockHooks) return;
+    const policyId = await lockHooks.getOnRiskPolicyId(clientId);
+    if (policyId === null) return;
+
+    const locations = await orgLocations.listLocationsForClient(clientId);
+    const existing = await orgLocations.listEndorsementsForPolicy(policyId);
+    const alreadyBaselined = new Set(
+      existing.filter((e) => e.kind === "BASELINE").map((e) => e.organisationLocationId),
+    );
+
+    const effectiveDate = new Date();
+    for (const location of locations) {
+      if (
+        location.coverCategoryId === null ||
+        location.headcount <= 0 ||
+        alreadyBaselined.has(location.id)
+      ) {
+        continue;
+      }
+      await orgLocations.createEndorsement({
+        clientId,
+        organisationLocationId: location.id,
+        coverCategoryId: location.coverCategoryId,
+        policyId,
+        delta: location.headcount,
+        effectiveDate,
+        note: "Baseline lock",
+        kind: "BASELINE",
+        createdByUserId: auth.userId,
+      });
+    }
   }
 
   return {
@@ -108,6 +149,16 @@ export function createRecalibrationService(
       return progressForBatch(batch);
     },
 
+    /** Most recent LOCKED batch for the client, or null. */
+    async getLockedBatch(
+      auth: AuthContext,
+      clientId: string,
+    ): Promise<RecalibrationBatchRecord | null> {
+      await assertClientAccess(auth, clientId);
+      const batches = await repo.listBatches(clientId);
+      return batches.find((b) => b.status === "LOCKED") ?? null;
+    },
+
     async lockBatch(auth: AuthContext, batchId: string): Promise<RecalibrationBatchRecord> {
       assertCanWrite(auth);
       const before = await repo.getBatchById(batchId);
@@ -127,6 +178,7 @@ export function createRecalibrationService(
       if (after === null) {
         throw new RecalibrationAlreadyLockedError();
       }
+      await bootstrapBaselineEndorsements(auth, after.clientId);
       await audit.append({
         actorUserId: auth.userId,
         actorRole: auth.role,
