@@ -2,14 +2,19 @@ import { createFixtureAuditWriter } from "@/lib/audit/writer";
 import { createFixtureClientBrokerRepository } from "@/lib/client/fixture-repository";
 import { CLIENT_BROKER_FIXTURES } from "@/lib/client/fixtures";
 import { createClientBrokerService } from "@/lib/client/service";
+import { createFixtureOrgLocationRepository } from "@/lib/org-location/fixture-repository";
+import { ORG_LOCATION_FIXTURES } from "@/lib/org-location/fixtures";
+import { createOrgLocationService } from "@/lib/org-location/service";
+import { createFixtureTerritoryRepository } from "@/lib/territory/fixture-repository";
+import { TERRITORY_FIXTURES } from "@/lib/territory/fixtures";
 import { createFixtureUserDirectory } from "@/lib/user-admin/directory";
 import { MANAGED_USER_FIXTURES } from "@/lib/user-admin/fixtures";
 import { createUserAdminService } from "@/lib/user-admin/service";
 
 /**
- * Builds the admin services wired to in-memory fixtures. Used by the /clients
- * and /admin/users surfaces (and server actions) until a Prisma-backed
- * repository/directory is provisioned with Neon + Clerk.
+ * Builds the admin services wired to in-memory fixtures. Used by the /clients,
+ * /organisations, and /admin/users surfaces (and server actions) until a
+ * Prisma-backed repository/directory is provisioned with Neon + Clerk.
  *
  * A single shared audit writer is returned so ACCESS_CHANGE entries from both
  * services land in one place within a request.
@@ -20,10 +25,16 @@ export function createFixtureAdminServices() {
     createFixtureClientBrokerRepository(CLIENT_BROKER_FIXTURES),
     audit,
   );
+  const orgLocation = createOrgLocationService(
+    createFixtureOrgLocationRepository(ORG_LOCATION_FIXTURES),
+    createFixtureTerritoryRepository(TERRITORY_FIXTURES),
+    clientBroker,
+    audit,
+  );
   const userAdmin = createUserAdminService(
     createFixtureUserDirectory(MANAGED_USER_FIXTURES),
     clientBroker,
     audit,
   );
-  return { audit, clientBroker, userAdmin };
+  return { audit, clientBroker, orgLocation, userAdmin };
 }

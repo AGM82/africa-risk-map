@@ -1,6 +1,6 @@
 ﻿import Link from "next/link";
 import { UserButton } from "@clerk/nextjs";
-import { Building2, Calculator, MapPinned, ShieldCheck, Users } from "lucide-react";
+import { Building2, Calculator, MapPinned, ShieldCheck, Users, Warehouse } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getAuthContext } from "@/lib/auth/session";
 
@@ -60,6 +60,19 @@ export default async function HomePage() {
                 Manage clients
               </Link>{" "}
               — accessible clients, broker assignments, and active-client context.
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-muted-foreground flex items-center gap-2 text-sm font-medium">
+                <Warehouse className="size-4" /> Organisations &amp; locations
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-muted-foreground text-sm">
+              <Link href="/organisations" className="text-foreground font-medium underline">
+                Member organisations
+              </Link>{" "}
+              — reserve/park operators, territory locations, and headcounts for the active client.
             </CardContent>
           </Card>
           {authContext.role !== "CLIENT" ? (

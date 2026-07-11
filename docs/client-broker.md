@@ -51,6 +51,5 @@ clients, `arm_active_client_id` (httpOnly cookie) selects the active client via
 
 ## Out of scope here
 
-- MemberOrganisation / OrganisationLocation → `org-location-model`
 - Policy / rates → policy-structure to-dos
 - Live Neon seed / migrate deploy
