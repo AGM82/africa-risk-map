@@ -39,6 +39,8 @@ The full product/architecture plan lives at `.cursor/plans/africa-risk-map-platf
 - PostGIS geometry helpers: `src/lib/db/spatial.ts` (WKT builders + parameterised SQL fragment descriptors)
 - PostGIS geometry pattern (docs): `docs/prisma-postgis-geometry.md`
 - Spatial import loaders (pure, fixture-tested): `src/lib/spatial/loaders/`
+- Workbook import loaders (pure, fixture-tested): `src/lib/import/loaders/`
+- Workbook import pattern (docs): `docs/workbook-import.md`
 - Auth context resolution: `src/lib/auth/session.ts`, `src/lib/auth/types.ts`
 - API error envelope: `src/lib/api/error-envelope.ts`
 - Route protection: `src/proxy.ts` (Next.js 16's `proxy` convention, formerly `middleware`)
