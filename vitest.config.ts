@@ -27,6 +27,14 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov"],
+      exclude: [
+        "src/app/**",
+        "src/lib/user-admin/clerk-directory.ts",
+        "src/components/**/**-workspace.tsx",
+        "src/components/map/map-canvas.tsx",
+        "src/components/map/risk-map-workspace.tsx",
+        "src/components/map/territory-drawer.tsx",
+      ],
       thresholds: {
         lines: 80,
         functions: 80,

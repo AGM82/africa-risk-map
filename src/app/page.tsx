@@ -1,6 +1,6 @@
 ﻿import Link from "next/link";
 import { UserButton } from "@clerk/nextjs";
-import { ShieldCheck, MapPinned, Calculator } from "lucide-react";
+import { Building2, Calculator, MapPinned, ShieldCheck, Users } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getAuthContext } from "@/lib/auth/session";
 
@@ -35,7 +35,7 @@ export default async function HomePage() {
           <UserButton />
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Card>
             <CardHeader>
               <CardTitle className="text-muted-foreground flex items-center gap-2 text-sm font-medium">
@@ -49,6 +49,34 @@ export default async function HomePage() {
               — territory risk choropleth, detail drawer, and table fallback.
             </CardContent>
           </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-muted-foreground flex items-center gap-2 text-sm font-medium">
+                <Building2 className="size-4" /> Clients &amp; brokers
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-muted-foreground text-sm">
+              <Link href="/clients" className="text-foreground font-medium underline">
+                Manage clients
+              </Link>{" "}
+              — accessible clients, broker assignments, and active-client context.
+            </CardContent>
+          </Card>
+          {authContext.role !== "CLIENT" ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-muted-foreground flex items-center gap-2 text-sm font-medium">
+                  <Users className="size-4" /> User administration
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-muted-foreground text-sm">
+                <Link href="/admin/users" className="text-foreground font-medium underline">
+                  Invite &amp; manage users
+                </Link>{" "}
+                — role and scope assignment with access-change audit.
+              </CardContent>
+            </Card>
+          ) : null}
           <Card>
             <CardHeader>
               <CardTitle className="text-muted-foreground flex items-center gap-2 text-sm font-medium">
