@@ -62,6 +62,34 @@ enum BenefitOptionsAvailable {
   DECLINE
 }
 
+/// Provenance source for an ExternalSignal (advisory evidence layer).
+enum ExternalSignalSource {
+  STATE_DEPT
+  WHO_GHO
+  WORLD_BANK
+  RELIEFWEB
+  GDACS
+  OURAIRPORTS
+  FIXTURE
+}
+
+/// Insurer review lifecycle for an ExternalSignal.
+enum ExternalSignalStatus {
+  PENDING_REVIEW
+  ACCEPTED
+  REJECTED
+}
+
+/// Optional hint of which Territory sub-score a signal may inform (never auto-applied).
+enum ExternalSignalSubScore {
+  healthcareInfrastructure
+  medicalPersonnel
+  medicalTransport
+  emergencyResponse
+  securityConflict
+  occupationalHazards
+}
+
 /// Lifecycle status of an insured Client organisation.
 enum ClientStatus {
   ACTIVE
@@ -197,12 +225,44 @@ model Territory {
   organisationLocations    OrganisationLocation[]
   territoryBenefitEligibilities TerritoryBenefitEligibility[]
   censusLocationLines      CensusLocationLine[]
+  externalSignals          ExternalSignal[]
 
   @@unique([country, subRegion])
   @@index([riskCategory])
   @@index([graaPresence])
   @@index([isoCountry])
   @@map("territories")
+}
+
+/// Advisory external evidence linked to a Territory. Never auto-reprices.
+/// Shared/global — no clientId, no RLS. Insurer review-gated.
+model ExternalSignal {
+  id                 String                  @id @default(cuid())
+  territoryId        String
+  territory          Territory               @relation(fields: [territoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  source             ExternalSignalSource
+  indicator          String
+  value              String
+  asOfDate           DateTime                @db.Date
+  fetchedAt          DateTime
+  sourceUrl          String?
+  quote              String?
+  rawPayload         Json
+  snapshotText       String?
+  status             ExternalSignalStatus    @default(PENDING_REVIEW)
+  reviewSuggested    Boolean                 @default(false)
+  reviewedAt         DateTime?
+  reviewedByUserId   String?
+  reviewNote         String?
+  affectedSubScore   ExternalSignalSubScore?
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+
+  @@unique([territoryId, source, indicator, asOfDate])
+  @@index([territoryId])
+  @@index([status])
+  @@index([fetchedAt])
+  @@map("external_signals")
 }
 
 /// Immutable snapshot of risk scores after each Insurer edit.

@@ -21,6 +21,7 @@ import { TERRITORY_FIXTURES } from "@/lib/territory/fixtures";
 import { createTerritoryService } from "@/lib/territory/service";
 import type { AuthContext } from "@/lib/auth/types";
 import type { TerritoryRecord, TerritoryScoreUpdate } from "@/lib/territory/types";
+import type { TerritorySignalSummary } from "@/components/map/territory-drawer";
 
 const MapCanvas = dynamic(
   () => import("@/components/map/map-canvas").then((mod) => mod.MapCanvas),
@@ -39,9 +40,10 @@ const MapCanvas = dynamic(
 
 type RiskMapWorkspaceProps = Readonly<{
   auth: AuthContext;
+  signals?: readonly (TerritorySignalSummary & { territoryId: string })[];
 }>;
 
-export function RiskMapWorkspace({ auth }: RiskMapWorkspaceProps) {
+export function RiskMapWorkspace({ auth, signals = [] }: RiskMapWorkspaceProps) {
   const service = useMemo(
     () => createTerritoryService(createFixtureTerritoryRepository(TERRITORY_FIXTURES)),
     [],
@@ -70,6 +72,23 @@ export function RiskMapWorkspace({ auth }: RiskMapWorkspaceProps) {
 
   const selected = territories.find((t) => t.id === selectedId) ?? null;
   const canEdit = auth.role === "INSURER_ADMIN";
+  const selectedSignals = useMemo(
+    () =>
+      selectedId === null
+        ? []
+        : signals
+            .filter((s) => s.territoryId === selectedId)
+            .map((s) => ({
+              id: s.id,
+              source: s.source,
+              indicator: s.indicator,
+              value: s.value,
+              status: s.status,
+              reviewSuggested: s.reviewSuggested,
+              asOfDate: s.asOfDate,
+            })),
+    [selectedId, signals],
+  );
 
   useEffect(() => {
     if (selectedId !== null && !filteredIds.has(selectedId)) {
@@ -208,6 +227,7 @@ export function RiskMapWorkspace({ auth }: RiskMapWorkspaceProps) {
           <TerritoryDrawer
             territory={selected}
             canEdit={canEdit}
+            signals={selectedSignals}
             onClose={() => setSelectedId(null)}
             onSaveScores={handleSaveScores}
             onDelete={handleDelete}
