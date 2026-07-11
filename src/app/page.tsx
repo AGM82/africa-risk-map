@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   MapPinned,
   MessagesSquare,
+  Radio,
   Scale,
   ScrollText,
   ShieldCheck,
@@ -95,10 +96,33 @@ export default async function HomePage() {
             <CardContent className="text-muted-foreground text-sm">
               <Link href="/map" className="text-foreground font-medium underline">
                 Open the map
-              </Link>{" "}
-              — territory risk choropleth, detail drawer, and table fallback.
+              </Link>
+              {authContext.role === "INSURER_ADMIN" ? (
+                <>
+                  {" · "}
+                  <Link href="/signals-review" className="text-foreground font-medium underline">
+                    Signal review
+                  </Link>
+                </>
+              ) : null}{" "}
+              — territory risk choropleth, detail drawer, and advisory external signals.
             </CardContent>
           </Card>
+          {authContext.role === "INSURER_ADMIN" ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-muted-foreground flex items-center gap-2 text-sm font-medium">
+                  <Radio className="size-4" /> External signals
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-muted-foreground text-sm">
+                <Link href="/signals-review" className="text-foreground font-medium underline">
+                  Review queue
+                </Link>{" "}
+                — advisory feed evidence; accept or reject without auto-repricing.
+              </CardContent>
+            </Card>
+          ) : null}
           <Card>
             <CardHeader>
               <CardTitle className="text-muted-foreground flex items-center gap-2 text-sm font-medium">

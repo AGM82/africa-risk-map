@@ -62,6 +62,8 @@ The full product/architecture plan lives at `.cursor/plans/africa-risk-map-platf
 - Premium calculator docs: `docs/premium-calculator.md`
 - Dashboards & reporting domain: `src/lib/reporting/`
 - Dashboards & reporting docs: `docs/dashboards-reporting.md`
+- External signals domain: `src/lib/external-signal/`
+- External signals docs: `docs/external-signals.md`
 - Audit writer port: `src/lib/audit/`
 - Auth context resolution: `src/lib/auth/session.ts`, `src/lib/auth/types.ts`, `src/lib/auth/tenant-scope.ts`
 - API error envelope: `src/lib/api/error-envelope.ts`

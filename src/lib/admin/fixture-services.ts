@@ -5,6 +5,9 @@ import { createCensusService } from "@/lib/census/service";
 import { createFixtureClientBrokerRepository } from "@/lib/client/fixture-repository";
 import { CLIENT_BROKER_FIXTURES } from "@/lib/client/fixtures";
 import { createClientBrokerService } from "@/lib/client/service";
+import { createFixtureExternalSignalRepository } from "@/lib/external-signal/fixture-repository";
+import { EXTERNAL_SIGNAL_FIXTURES } from "@/lib/external-signal/fixtures";
+import { createExternalSignalService } from "@/lib/external-signal/service";
 import { createFixtureOrgLocationRepository } from "@/lib/org-location/fixture-repository";
 import { ORG_LOCATION_FIXTURES } from "@/lib/org-location/fixtures";
 import { createOrgLocationService } from "@/lib/org-location/service";
@@ -89,6 +92,10 @@ function buildFixtureAdminServices() {
     clientBroker,
     audit,
   );
+  const externalSignal = createExternalSignalService(
+    createFixtureExternalSignalRepository(EXTERNAL_SIGNAL_FIXTURES),
+    audit,
+  );
   const structureChat = createStructureChatService(
     createFixtureStructureChatRepository(STRUCTURE_CHAT_FIXTURES),
     clientBroker,
@@ -110,6 +117,7 @@ function buildFixtureAdminServices() {
     premium,
     reporting,
     census,
+    externalSignal,
     structureChat,
     userAdmin,
   };

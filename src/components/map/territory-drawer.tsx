@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   displayLabel,
@@ -13,14 +14,26 @@ import { RISK_CATEGORY_HEX } from "@/lib/territory/colors";
 type TerritoryDrawerProps = Readonly<{
   territory: TerritoryRecord | null;
   canEdit: boolean;
+  signals?: readonly TerritorySignalSummary[];
   onClose: () => void;
   onSaveScores: (id: string, scores: TerritoryScoreUpdate) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }>;
 
+export type TerritorySignalSummary = Readonly<{
+  id: string;
+  source: string;
+  indicator: string;
+  value: string;
+  status: string;
+  reviewSuggested: boolean;
+  asOfDate: string;
+}>;
+
 export function TerritoryDrawer({
   territory,
   canEdit,
+  signals = [],
   onClose,
   onSaveScores,
   onDelete,
@@ -136,6 +149,41 @@ export function TerritoryDrawer({
             </div>
           ) : null}
         </dl>
+
+        <section aria-labelledby="signals-heading" className="space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <h3 id="signals-heading" className="text-sm font-semibold">
+              External signals
+            </h3>
+            {signals.some((s) => s.reviewSuggested && s.status === "PENDING_REVIEW") ? (
+              <span className="rounded-md bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-800 dark:text-amber-300">
+                Review suggested
+              </span>
+            ) : null}
+          </div>
+          {signals.length === 0 ? (
+            <p className="text-muted-foreground text-sm">No external signals for this territory.</p>
+          ) : (
+            <ul className="space-y-2 text-sm">
+              {signals.slice(0, 5).map((s) => (
+                <li key={s.id} className="rounded-md border p-2">
+                  <p className="font-medium">
+                    {s.source} · {s.indicator}
+                  </p>
+                  <p className="text-muted-foreground">{s.value}</p>
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    {s.status.replaceAll("_", " ")} · as of {s.asOfDate}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+          {canEdit ? (
+            <Link href="/signals-review" className="text-sm underline">
+              Open signal review queue
+            </Link>
+          ) : null}
+        </section>
 
         {canEdit ? (
           <form
