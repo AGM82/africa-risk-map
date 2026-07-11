@@ -1,0 +1,5 @@
+id,ident,type,name,latitude_deg,longitude_deg,iso_country,iata_code,icao_code
+1,FAOR,large_airport,O.R. Tambo International Airport,-26.1392,28.246,ZA,JNB,FAOR
+2,HKJK,large_airport,Jomo Kenyatta International Airport,-1.3192,36.9278,KE,NBO,HKJK
+3,BAD1,small_airport,Broken Strip,,28.0,ZA,,
+4,BAD2,heliport,,-26.0,28.0,ZA,,

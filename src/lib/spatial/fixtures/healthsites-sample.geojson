@@ -1,0 +1,53 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "hs-1",
+      "properties": {
+        "name": "Chris Hani Baragwanath Hospital",
+        "amenity": "hospital",
+        "isocode": "ZAF"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [27.938, -26.261]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 999001,
+        "name": "Kenyatta National Hospital",
+        "amenity": "hospital",
+        "isocode": "KEN"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [36.807, -1.301]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hs-bad",
+      "properties": {
+        "name": "No Coordinates Clinic",
+        "amenity": "clinic",
+        "isocode": "ZAF"
+      },
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "id": "hs-oob",
+      "properties": {
+        "name": "Out Of Bounds",
+        "amenity": "clinic"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [200, 0]
+      }
+    }
+  ]
+}
