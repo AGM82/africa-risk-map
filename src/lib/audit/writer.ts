@@ -45,9 +45,8 @@ export function createFixtureAuditWriter(): AuditWriter {
     },
 
     list() {
-      return Promise.resolve(
-        [...entries].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()),
-      );
+      // Newest-first; reverse append order because same-ms timestamps are common in CI.
+      return Promise.resolve([...entries].reverse());
     },
   };
 }
