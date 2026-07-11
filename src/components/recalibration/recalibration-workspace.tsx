@@ -170,7 +170,11 @@ export function RecalibrationWorkspace({
               <p className="text-sm" role="status">
                 Baseline locked
                 {snapshot.lockedAt ? ` on ${new Date(snapshot.lockedAt).toLocaleString()}` : ""}.
-                Normal add/remove endorsements take over next (premium-calculator to-do).
+                Use the{" "}
+                <Link href="/calculator" className="text-foreground font-medium underline">
+                  premium calculator
+                </Link>{" "}
+                for add/remove endorsements and what-if quotes.
               </p>
             ) : snapshot.balanced ? (
               <div className="space-y-3 rounded-lg border border-[#D30C55]/40 bg-[#D30C55]/5 p-4">

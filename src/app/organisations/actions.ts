@@ -65,6 +65,7 @@ export async function createLocationAction(input: {
   siteName: string;
   headcount: number;
   assignedPlanType: PlanType;
+  coverCategoryId?: string | null;
 }): Promise<ActionResult> {
   try {
     const auth = await requireAuthContext();
@@ -72,6 +73,7 @@ export async function createLocationAction(input: {
     await orgLocation.createLocation(auth, input);
     revalidatePath("/organisations");
     revalidatePath("/recalibration");
+    revalidatePath("/calculator");
     return { ok: true };
   } catch (error) {
     return { ok: false, error: toError(error) };

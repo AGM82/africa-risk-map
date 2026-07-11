@@ -119,6 +119,7 @@ model Client {
   policies                Policy[]
   riskMixPolicies         RiskMixPolicy[]
   structureSessions       PolicyStructureSession[]
+  endorsements            Endorsement[]
 
   @@index([status])
   @@map("clients")
@@ -381,7 +382,7 @@ model MemberOrganisation {
 }
 
 /// A member org's presence in a Territory with headcount and cover assignment.
-/// Endorsements (future) attach here; parent delete is RESTRICT once live.
+/// Endorsements attach here; parent delete is RESTRICT once endorsements exist.
 model OrganisationLocation {
   id                    String             @id @default(cuid())
   clientId              String
@@ -392,22 +393,58 @@ model OrganisationLocation {
   /// Site label within the territory (e.g. park/reserve name).
   siteName              String
   headcount             Int                @default(0)
-  /// Interim until CoverCategory FK is added in policy-structure.
+  /// Kept in sync with CoverCategory.planType when coverCategoryId is set.
   assignedPlanType      PlanType
-  /// Nullable FK placeholder for policy-structure to wire CoverCategory.id.
   coverCategoryId       String?
+  coverCategory         CoverCategory?     @relation(fields: [coverCategoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
+  endorsements          Endorsement[]
 
   @@index([clientId])
   @@index([memberOrganisationId])
   @@index([territoryId])
+  @@index([coverCategoryId])
   @@map("organisation_locations")
+}
+
+enum EndorsementKind {
+  BASELINE
+  ADD
+  REMOVE
+}
+
+/// Headcount ledger row against an OrganisationLocation (replaces Excel endorsement rows).
+/// Parent location delete is RESTRICT so financial history cannot be destroyed.
+model Endorsement {
+  id                     String               @id @default(cuid())
+  clientId               String
+  client                 Client               @relation(fields: [clientId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  organisationLocationId String
+  organisationLocation   OrganisationLocation @relation(fields: [organisationLocationId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  coverCategoryId        String
+  coverCategory          CoverCategory        @relation(fields: [coverCategoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  policyId               String
+  policy                 Policy               @relation(fields: [policyId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  /// Positive for BASELINE/ADD; negative for REMOVE. Never zero.
+  delta                  Int
+  effectiveDate          DateTime
+  note                   String?
+  kind                   EndorsementKind
+  createdByUserId        String
+  createdAt              DateTime             @default(now())
+
+  @@index([clientId])
+  @@index([organisationLocationId])
+  @@index([coverCategoryId])
+  @@index([policyId])
+  @@index([effectiveDate])
+  @@map("endorsements")
 }
 
 // ---------------------------------------------------------------------------
 // Client-scoped recalibration: reconcile org/location headcounts against
-// ledger PlanType baselines until balanced, then lock. Endorsements later.
+// ledger PlanType baselines until balanced, then lock. Endorsements bootstrap on lock.
 // ---------------------------------------------------------------------------
 
 enum RecalibrationStatus {
@@ -436,7 +473,6 @@ model RecalibrationBatch {
 // ---------------------------------------------------------------------------
 // Client-scoped Policy Schedule (annual term) + RiskMixPolicy.
 // benefitScale: FIXED_SUM (GPA) vs EARNINGS_BASED (Stated Benefits).
-// OrganisationLocation.coverCategoryId FK lands in a later to-do.
 // ---------------------------------------------------------------------------
 
 enum PolicyStatus {
@@ -513,6 +549,7 @@ model Policy {
   updatedAt            DateTime       @updatedAt
   coverCategories      CoverCategory[]
   structureSessions    PolicyStructureSession[]
+  endorsements         Endorsement[]
 
   @@unique([clientId, policyYear])
   @@index([clientId])
@@ -543,6 +580,8 @@ model CoverCategory {
   updatedAt              DateTime         @updatedAt
   benefitLines           BenefitLine[]
   territoryEligibilities TerritoryBenefitEligibility[]
+  organisationLocations  OrganisationLocation[]
+  endorsements           Endorsement[]
 
   @@index([policyId])
   @@index([clientId])

@@ -1,5 +1,7 @@
 import type { PolicySeed } from "@/lib/policy/fixture-repository";
 import type { BenefitLineCreateInput } from "@/lib/policy/types";
+import { seedTerritoryEligibility } from "@/lib/policy/eligibility-seed";
+import { TERRITORY_FIXTURES } from "@/lib/territory/fixtures";
 
 const SEED = new Date("2025-12-01T00:00:00.000Z");
 const EXPIRY = new Date("2026-11-30T00:00:00.000Z");
@@ -285,5 +287,37 @@ export const POLICY_FIXTURES: PolicySeed = {
       updatedAt: SEED,
     },
   ],
-  territoryEligibilities: [],
+  territoryEligibilities: [
+    ...seedTerritoryEligibility({
+      clientId: "client-graa",
+      categories: [
+        { id: "cat-graa-essential", planType: "ESSENTIAL" },
+        { id: "cat-graa-premium", planType: "PREMIUM" },
+      ],
+      territories: TERRITORY_FIXTURES.map((t) => ({
+        id: t.id,
+        benefitOptions: t.benefitOptions,
+      })),
+    }).map((row, i) => ({
+      id: `elig-graa-${String(i)}`,
+      territoryId: row.territoryId,
+      coverCategoryId: row.coverCategoryId,
+      clientId: row.clientId,
+      createdAt: SEED,
+    })),
+    ...seedTerritoryEligibility({
+      clientId: "client-aparks",
+      categories: [{ id: "cat-aparks-staff", planType: "PREMIUM" }],
+      territories: TERRITORY_FIXTURES.map((t) => ({
+        id: t.id,
+        benefitOptions: t.benefitOptions,
+      })),
+    }).map((row, i) => ({
+      id: `elig-aparks-${String(i)}`,
+      territoryId: row.territoryId,
+      coverCategoryId: row.coverCategoryId,
+      clientId: row.clientId,
+      createdAt: SEED,
+    })),
+  ],
 };

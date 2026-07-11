@@ -5,6 +5,7 @@ const SEED_DATE = new Date("2026-01-01T00:00:00.000Z");
 /**
  * Demo member orgs and locations for GRAA. Placeholder names only — never real
  * reserve/park operators or personal information (POPIA).
+ * coverCategoryId wired to GRAA on-risk schedule categories.
  */
 export const ORG_LOCATION_FIXTURES: OrgLocationSeed = {
   memberOrganisations: [
@@ -42,7 +43,7 @@ export const ORG_LOCATION_FIXTURES: OrgLocationSeed = {
       siteName: "Demo reserve — Low risk",
       headcount: 42,
       assignedPlanType: "ESSENTIAL",
-      coverCategoryId: null,
+      coverCategoryId: "cat-graa-essential",
       createdAt: SEED_DATE,
       updatedAt: SEED_DATE,
     },
@@ -54,9 +55,37 @@ export const ORG_LOCATION_FIXTURES: OrgLocationSeed = {
       siteName: "Demo park — Kenya",
       headcount: 18,
       assignedPlanType: "PREMIUM",
-      coverCategoryId: null,
+      coverCategoryId: "cat-graa-premium",
       createdAt: SEED_DATE,
       updatedAt: SEED_DATE,
+    },
+  ],
+  endorsements: [
+    {
+      id: "end-demo-zaf-baseline",
+      clientId: "client-graa",
+      organisationLocationId: "loc-demo-zaf",
+      coverCategoryId: "cat-graa-essential",
+      policyId: "policy-graa-2025-26",
+      delta: 42,
+      effectiveDate: SEED_DATE,
+      note: "Opening baseline (demo — pre-lock seed)",
+      kind: "BASELINE",
+      createdByUserId: "user-insurer",
+      createdAt: SEED_DATE,
+    },
+    {
+      id: "end-demo-ken-baseline",
+      clientId: "client-graa",
+      organisationLocationId: "loc-demo-ken",
+      coverCategoryId: "cat-graa-premium",
+      policyId: "policy-graa-2025-26",
+      delta: 18,
+      effectiveDate: SEED_DATE,
+      note: "Opening baseline (demo — pre-lock seed)",
+      kind: "BASELINE",
+      createdByUserId: "user-insurer",
+      createdAt: SEED_DATE,
     },
   ],
 };

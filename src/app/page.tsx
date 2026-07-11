@@ -119,8 +119,10 @@ export default async function HomePage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="text-muted-foreground text-sm">
-              Premium/aggregate what-if simulation with underwriting gates. Built in the
-              premium-calculator to-do.
+              <Link href="/calculator" className="text-foreground font-medium underline">
+                Open calculator
+              </Link>{" "}
+              — live book totals, what-if adds, underwriting gates, and risk-mix drift.
             </CardContent>
           </Card>
           <Card>

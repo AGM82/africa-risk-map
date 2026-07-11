@@ -54,6 +54,6 @@ or unbalanced.
 
 ## Out of scope
 
-- Endorsement ledger → premium-calculator
-- CoverCategory baselines on locations → wire FK after policy-structure (see `docs/policy-structure.md`)
+- Endorsement ledger & what-if confirm → [`docs/premium-calculator.md`](premium-calculator.md)
+- CoverCategory baselines (still PlanType JSON until a later migration)
 - Live Neon seed / migrate deploy

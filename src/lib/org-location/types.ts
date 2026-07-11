@@ -1,8 +1,7 @@
 /**
- * MemberOrganisation / OrganisationLocation domain types.
+ * MemberOrganisation / OrganisationLocation / Endorsement domain types.
  *
  * Client-scoped: every row carries clientId for RLS and tenant scoping.
- * assignedPlanType / defaultPlanType are interim until CoverCategory exists.
  */
 
 export const MEMBER_ORG_STATUSES = [
@@ -83,4 +82,33 @@ export type OrganisationLocationUpdateInput = Readonly<{
 export type MemberOrganisationWithLocations = Readonly<{
   organisation: MemberOrganisationRecord;
   locations: readonly OrganisationLocationRecord[];
+}>;
+
+export const ENDORSEMENT_KINDS = ["BASELINE", "ADD", "REMOVE"] as const;
+export type EndorsementKind = (typeof ENDORSEMENT_KINDS)[number];
+
+export type EndorsementRecord = Readonly<{
+  id: string;
+  clientId: string;
+  organisationLocationId: string;
+  coverCategoryId: string;
+  policyId: string;
+  delta: number;
+  effectiveDate: Date;
+  note: string | null;
+  kind: EndorsementKind;
+  createdByUserId: string;
+  createdAt: Date;
+}>;
+
+export type EndorsementCreateInput = Readonly<{
+  clientId: string;
+  organisationLocationId: string;
+  coverCategoryId: string;
+  policyId: string;
+  delta: number;
+  effectiveDate: Date;
+  note?: string | null;
+  kind: EndorsementKind;
+  createdByUserId: string;
 }>;

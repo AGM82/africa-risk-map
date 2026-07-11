@@ -19,6 +19,7 @@ export type LocationRowView = Readonly<{
   territoryLabel: string;
   headcount: number;
   assignedPlanType: PlanType;
+  coverCategoryLabel: string | null;
 }>;
 
 export type OrganisationRowView = Readonly<{
@@ -39,6 +40,12 @@ type TerritoryOption = Readonly<{
   benefitOptions: string;
 }>;
 
+type CoverCategoryOption = Readonly<{
+  id: string;
+  label: string;
+  planType: PlanType;
+}>;
+
 type SwitcherOption = Readonly<{ id: string; name: string }>;
 
 type OrganisationsWorkspaceProps = Readonly<{
@@ -49,6 +56,7 @@ type OrganisationsWorkspaceProps = Readonly<{
   switcherOptions: readonly SwitcherOption[];
   rows: readonly OrganisationRowView[];
   territories: readonly TerritoryOption[];
+  coverCategories: readonly CoverCategoryOption[];
   canWrite: boolean;
 }>;
 
@@ -70,6 +78,7 @@ export function OrganisationsWorkspace({
   switcherOptions,
   rows,
   territories,
+  coverCategories,
   canWrite,
 }: OrganisationsWorkspaceProps) {
   const router = useRouter();
@@ -96,13 +105,17 @@ export function OrganisationsWorkspace({
 
   function handleCreateLocation(memberOrganisationId: string, formData: FormData) {
     setError(null);
+    const coverCategoryId = formString(formData, "coverCategoryId");
+    const category = coverCategories.find((c) => c.id === coverCategoryId);
     startTransition(async () => {
       const result = await createLocationAction({
         memberOrganisationId,
         territoryId: formString(formData, "territoryId"),
         siteName: formString(formData, "siteName"),
         headcount: formNumber(formData, "headcount"),
-        assignedPlanType: formString(formData, "assignedPlanType") as PlanType,
+        assignedPlanType: (category?.planType ??
+          formString(formData, "assignedPlanType")) as PlanType,
+        coverCategoryId: coverCategoryId.length > 0 ? coverCategoryId : null,
       });
       if (!result.ok) {
         setError(result.error);
@@ -266,7 +279,7 @@ export function OrganisationsWorkspace({
                               Headcount
                             </th>
                             <th scope="col" className="px-3 py-2 font-semibold">
-                              Plan
+                              Cover category
                             </th>
                           </tr>
                         </thead>
@@ -276,7 +289,9 @@ export function OrganisationsWorkspace({
                               <td className="px-3 py-2">{loc.siteName}</td>
                               <td className="px-3 py-2">{loc.territoryLabel}</td>
                               <td className="px-3 py-2">{loc.headcount}</td>
-                              <td className="px-3 py-2">{loc.assignedPlanType}</td>
+                              <td className="px-3 py-2">
+                                {loc.coverCategoryLabel ?? loc.assignedPlanType}
+                              </td>
                             </tr>
                           ))}
                         </tbody>
@@ -319,17 +334,34 @@ export function OrganisationsWorkspace({
                               className="border-input bg-background w-24 rounded-md border px-2 py-1.5"
                             />
                           </label>
-                          <label className="flex flex-col gap-1 text-sm">
-                            Plan
-                            <select
-                              name="assignedPlanType"
-                              defaultValue="ESSENTIAL"
-                              className="border-input bg-background rounded-md border px-2 py-1.5"
-                            >
-                              <option value="ESSENTIAL">Essential</option>
-                              <option value="PREMIUM">Premium</option>
-                            </select>
-                          </label>
+                          {coverCategories.length > 0 ? (
+                            <label className="flex flex-col gap-1 text-sm">
+                              Cover category
+                              <select
+                                name="coverCategoryId"
+                                required
+                                className="border-input bg-background max-w-xs rounded-md border px-2 py-1.5"
+                              >
+                                {coverCategories.map((c) => (
+                                  <option key={c.id} value={c.id}>
+                                    {c.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                          ) : (
+                            <label className="flex flex-col gap-1 text-sm">
+                              Plan
+                              <select
+                                name="assignedPlanType"
+                                defaultValue="ESSENTIAL"
+                                className="border-input bg-background rounded-md border px-2 py-1.5"
+                              >
+                                <option value="ESSENTIAL">Essential</option>
+                                <option value="PREMIUM">Premium</option>
+                              </select>
+                            </label>
+                          )}
                           <Button type="submit" size="sm" disabled={pending}>
                             Add location
                           </Button>
