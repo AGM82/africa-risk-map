@@ -36,6 +36,22 @@ function assertInsurer(auth: AuthContext): void {
   }
 }
 
+function advisoryFieldsEqual(
+  existing: ExternalSignalRecord,
+  item: ExternalSignalCreateInput,
+): boolean {
+  return (
+    existing.value === item.value &&
+    existing.reviewSuggested === (item.reviewSuggested ?? false) &&
+    existing.sourceUrl === (item.sourceUrl ?? null) &&
+    existing.quote === (item.quote ?? null) &&
+    existing.snapshotText === (item.snapshotText ?? null) &&
+    existing.affectedSubScore === (item.affectedSubScore ?? null) &&
+    existing.fetchedAt.getTime() === new Date(item.fetchedAt).getTime() &&
+    JSON.stringify(existing.rawPayload) === JSON.stringify(item.rawPayload)
+  );
+}
+
 /**
  * ExternalSignal service. Advisory only — never mutates Territory scores.
  * Review mutations are Insurer-only; territory-scoped reads are open to any
@@ -65,7 +81,11 @@ export function createExternalSignalService(repo: ExternalSignalRepository, audi
       reviewNote: parsed.note ?? null,
       updatedAt: new Date(),
     };
-    const saved = await repo.update(next);
+    // Atomic status precondition — loses the race if another reviewer already decided.
+    const saved = await repo.updateIfStatus(parsed.signalId, "PENDING_REVIEW", next);
+    if (saved === null) {
+      throw new ExternalSignalReviewError("Signal was already reviewed by another request");
+    }
     await audit.append({
       actorUserId: auth.userId,
       actorRole: auth.role,
@@ -164,13 +184,7 @@ export function createExternalSignalService(repo: ExternalSignalRepository, audi
           continue;
         }
 
-        const sameValue =
-          existing.value === item.value &&
-          existing.reviewSuggested === (item.reviewSuggested ?? false) &&
-          existing.sourceUrl === (item.sourceUrl ?? null) &&
-          existing.quote === (item.quote ?? null);
-
-        if (sameValue) {
+        if (advisoryFieldsEqual(existing, item)) {
           unchanged += 1;
           continue;
         }

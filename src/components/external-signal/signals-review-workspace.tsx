@@ -93,18 +93,25 @@ export function SignalsReviewWorkspace({ authRole, rows }: SignalsReviewWorkspac
 
   function handleConfirm() {
     if (!confirm) return;
+    const pendingConfirm = confirm;
     startTransition(async () => {
       setError(null);
       const result =
-        confirm.action === "accept"
-          ? await acceptExternalSignalAction({ signalId: confirm.id, note: note || null })
-          : await rejectExternalSignalAction({ signalId: confirm.id, note: note || null });
-      setConfirm(null);
-      setNote("");
+        pendingConfirm.action === "accept"
+          ? await acceptExternalSignalAction({
+              signalId: pendingConfirm.id,
+              note: note || null,
+            })
+          : await rejectExternalSignalAction({
+              signalId: pendingConfirm.id,
+              note: note || null,
+            });
       if (!result.ok) {
         setError(result.error);
         return;
       }
+      setConfirm(null);
+      setNote("");
       router.refresh();
     });
   }

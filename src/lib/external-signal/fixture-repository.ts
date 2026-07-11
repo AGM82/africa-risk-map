@@ -149,5 +149,27 @@ export function createFixtureExternalSignalRepository(
       );
       return Promise.resolve(clone(next));
     },
+
+    updateIfStatus(id, expectedStatus, record) {
+      const current = byId.get(id);
+      if (!current) {
+        return Promise.reject(new Error(`External signal not found: ${id}`));
+      }
+      if (current.status !== expectedStatus) {
+        return Promise.resolve(null);
+      }
+      const next = clone({ ...record, id, updatedAt: new Date() });
+      byId.set(next.id, next);
+      byKey.set(
+        keyOf({
+          territoryId: next.territoryId,
+          source: next.source,
+          indicator: next.indicator,
+          asOfDate: next.asOfDate,
+        }),
+        next.id,
+      );
+      return Promise.resolve(clone(next));
+    },
   };
 }

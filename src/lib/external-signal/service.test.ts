@@ -133,4 +133,71 @@ describe("external-signal service", () => {
     const all = await repo.list();
     expect(all).toHaveLength(EXTERNAL_SIGNAL_FIXTURES.length);
   });
+
+  it("syncFixtureFeeds refreshes pending rows when only rawPayload/snapshot change", async () => {
+    const { externalSignal, repo } = build();
+    const base = EXTERNAL_SIGNAL_FIXTURES.find((f) => f.id === "sig-som-punt-gdacs");
+    expect(base).toBeDefined();
+    const seed = [
+      {
+        ...base!,
+        rawPayload: { alertLevel: "Red", eventType: "DR", revised: true },
+        snapshotText: "Drought watch escalated",
+        fetchedAt: new Date("2026-04-12T06:30:00.000Z"),
+      },
+    ];
+    const result = await externalSignal.syncFixtureFeeds(seed);
+    expect(result.updated).toBe(1);
+    const refreshed = await repo.getById("sig-som-punt-gdacs");
+    expect(refreshed?.rawPayload).toEqual({
+      alertLevel: "Red",
+      eventType: "DR",
+      revised: true,
+    });
+    expect(refreshed?.snapshotText).toBe("Drought watch escalated");
+    expect(refreshed?.fetchedAt.toISOString()).toBe("2026-04-12T06:30:00.000Z");
+  });
+
+  it("rejects a concurrent second review via updateIfStatus precondition", async () => {
+    const { externalSignal, audit, repo } = build();
+    const first = await externalSignal.accept(insurer, "sig-nga-ne-reliefweb", {
+      note: "first",
+    });
+    expect(first.status).toBe("ACCEPTED");
+
+    // Simulate a second request that already passed the early PENDING check by
+    // calling updateIfStatus directly after status flipped.
+    const race = await repo.updateIfStatus("sig-nga-ne-reliefweb", "PENDING_REVIEW", {
+      ...first,
+      status: "REJECTED",
+      reviewNote: "second",
+    });
+    expect(race).toBeNull();
+
+    await expect(
+      externalSignal.reject(insurer, "sig-nga-ne-reliefweb", { note: "second" }),
+    ).rejects.toBeInstanceOf(ExternalSignalReviewError);
+
+    const entries = await audit.list();
+    const signalAudits = entries.filter((e) => e.entityId === "sig-nga-ne-reliefweb");
+    expect(signalAudits).toHaveLength(1);
+  });
+
+  it("allows only one of two overlapping accept/reject calls to audit", async () => {
+    const { externalSignal, audit, repo } = build();
+    const results = await Promise.allSettled([
+      externalSignal.accept(insurer, "sig-nga-ne-state-dept", { note: "a" }),
+      externalSignal.reject(insurer, "sig-nga-ne-state-dept", { note: "b" }),
+    ]);
+    const fulfilled = results.filter((r) => r.status === "fulfilled");
+    const rejected = results.filter((r) => r.status === "rejected");
+    expect(fulfilled).toHaveLength(1);
+    expect(rejected).toHaveLength(1);
+
+    const final = await repo.getById("sig-nga-ne-state-dept");
+    expect(final?.status === "ACCEPTED" || final?.status === "REJECTED").toBe(true);
+
+    const entries = await audit.list();
+    expect(entries.filter((e) => e.entityId === "sig-nga-ne-state-dept")).toHaveLength(1);
+  });
 });

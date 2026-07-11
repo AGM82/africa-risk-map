@@ -16,4 +16,13 @@ export type ExternalSignalRepository = {
   findByKey(key: ExternalSignalUpsertKey): Promise<ExternalSignalRecord | null>;
   create(input: ExternalSignalCreateInput): Promise<ExternalSignalRecord>;
   update(record: ExternalSignalRecord): Promise<ExternalSignalRecord>;
+  /**
+   * Atomically apply `record` only when the stored row still has `expectedStatus`.
+   * Returns null when the precondition fails (lost race / already reviewed).
+   */
+  updateIfStatus(
+    id: string,
+    expectedStatus: ExternalSignalStatus,
+    record: ExternalSignalRecord,
+  ): Promise<ExternalSignalRecord | null>;
 };
