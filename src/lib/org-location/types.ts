@@ -26,6 +26,11 @@ export type MemberOrganisationRecord = Readonly<{
   riskMgmtPlanOnFile: boolean;
   crisisMgmtPlanOnFile: boolean;
   fullUnderwritingApproved: boolean;
+  contactName: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  operationsNote: string | null;
+  lastCensusAcceptedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }>;
@@ -51,6 +56,10 @@ export type MemberOrganisationCreateInput = Readonly<{
   riskMgmtPlanOnFile?: boolean;
   crisisMgmtPlanOnFile?: boolean;
   fullUnderwritingApproved?: boolean;
+  contactName?: string | null;
+  contactEmail?: string | null;
+  contactPhone?: string | null;
+  operationsNote?: string | null;
 }>;
 
 export type MemberOrganisationUpdateInput = Readonly<{
@@ -60,6 +69,11 @@ export type MemberOrganisationUpdateInput = Readonly<{
   riskMgmtPlanOnFile?: boolean;
   crisisMgmtPlanOnFile?: boolean;
   fullUnderwritingApproved?: boolean;
+  contactName?: string | null;
+  contactEmail?: string | null;
+  contactPhone?: string | null;
+  operationsNote?: string | null;
+  lastCensusAcceptedAt?: Date | null;
 }>;
 
 export type OrganisationLocationCreateInput = Readonly<{

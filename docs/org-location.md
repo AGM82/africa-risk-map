@@ -14,6 +14,8 @@ UI: `/organisations` (scoped to active client).
 - Belongs to a **Client** (`clientId` tenant key)
 - `name`, lifecycle `status` (`PENDING_SUBMISSION` → `UNDER_REVIEW` → `ACTIVE` / `DECLINED`)
 - `defaultPlanType` (`ESSENTIAL` / `PREMIUM`) — interim until CoverCategory per Policy
+- Profile (census): `contactName` / `contactEmail` / `contactPhone`, `operationsNote`,
+  `lastCensusAcceptedAt`
 - Underwriting flags: `riskMgmtPlanOnFile`, `crisisMgmtPlanOnFile`, `fullUnderwritingApproved`
 - RLS: same broker-visible-clients pattern as `0004_client_broker`
 
@@ -49,4 +51,5 @@ Fixture repository: `createFixtureOrgLocationRepository(ORG_LOCATION_FIXTURES)`.
 
 - Recalibration against ledger baselines → `docs/recalibration.md`
 - Endorsement ledger & premium engine → [`docs/premium-calculator.md`](premium-calculator.md)
+- Magic-link census intake (profile + invite + review) → [`docs/census-intake.md`](census-intake.md)
 - Map pin overlay for org locations → future map integration

@@ -152,6 +152,10 @@ export function createOrgLocationService(
         ...(parsed.fullUnderwritingApproved !== undefined
           ? { fullUnderwritingApproved: parsed.fullUnderwritingApproved }
           : {}),
+        ...(parsed.contactName !== undefined ? { contactName: parsed.contactName } : {}),
+        ...(parsed.contactEmail !== undefined ? { contactEmail: parsed.contactEmail } : {}),
+        ...(parsed.contactPhone !== undefined ? { contactPhone: parsed.contactPhone } : {}),
+        ...(parsed.operationsNote !== undefined ? { operationsNote: parsed.operationsNote } : {}),
       });
       await audit.append({
         actorUserId: auth.userId,
@@ -191,6 +195,13 @@ export function createOrgLocationService(
           : {}),
         ...(parsed.fullUnderwritingApproved !== undefined
           ? { fullUnderwritingApproved: parsed.fullUnderwritingApproved }
+          : {}),
+        ...(parsed.contactName !== undefined ? { contactName: parsed.contactName } : {}),
+        ...(parsed.contactEmail !== undefined ? { contactEmail: parsed.contactEmail } : {}),
+        ...(parsed.contactPhone !== undefined ? { contactPhone: parsed.contactPhone } : {}),
+        ...(parsed.operationsNote !== undefined ? { operationsNote: parsed.operationsNote } : {}),
+        ...(parsed.lastCensusAcceptedAt !== undefined
+          ? { lastCensusAcceptedAt: parsed.lastCensusAcceptedAt }
           : {}),
       });
       if (after === null) {

@@ -18,13 +18,15 @@ export default async function OrganisationsPage() {
     redirect("/");
   }
 
-  const { clientBroker, orgLocation, policy } = createFixtureAdminServices();
+  const { clientBroker, orgLocation, policy, census } = createFixtureAdminServices();
   const cookieStore = await cookies();
   const scope = await resolveTenantScope(
     auth,
     clientBroker,
     cookieStore.get(ACTIVE_CLIENT_COOKIE)?.value,
   );
+
+  const canInviteCensus = true;
 
   if (scope.activeClientId === null) {
     return (
@@ -38,6 +40,7 @@ export default async function OrganisationsPage() {
         territories={[]}
         coverCategories={[]}
         canWrite={auth.role !== "CLIENT"}
+        canInviteCensus={canInviteCensus}
       />
     );
   }
@@ -47,6 +50,14 @@ export default async function OrganisationsPage() {
     auth,
     scope.activeClientId,
   );
+  const invitations = await census.listInvitations(auth, scope.activeClientId);
+  const now = Date.now();
+  const openInviteByOrg = new Map(
+    invitations
+      .filter((i) => i.revokedAt === null && i.expiresAt.getTime() > now)
+      .map((i) => [i.memberOrganisationId, i.purpose] as const),
+  );
+
   const territoryRepo = createFixtureTerritoryRepository(TERRITORY_FIXTURES);
   const territories = await territoryRepo.list();
   const territoryById = new Map(territories.map((t) => [t.id, t]));
@@ -68,6 +79,12 @@ export default async function OrganisationsPage() {
     riskMgmtPlanOnFile: organisation.riskMgmtPlanOnFile,
     crisisMgmtPlanOnFile: organisation.crisisMgmtPlanOnFile,
     fullUnderwritingApproved: organisation.fullUnderwritingApproved,
+    contactName: organisation.contactName,
+    contactEmail: organisation.contactEmail,
+    contactPhone: organisation.contactPhone,
+    operationsNote: organisation.operationsNote,
+    lastCensusAcceptedAtIso: organisation.lastCensusAcceptedAt?.toISOString() ?? null,
+    openInvitationPurpose: openInviteByOrg.get(organisation.id) ?? null,
     locations: locations.map((loc) => {
       const territory = territoryById.get(loc.territoryId);
       const category = loc.coverCategoryId ? categoryById.get(loc.coverCategoryId) : undefined;
@@ -105,6 +122,7 @@ export default async function OrganisationsPage() {
       }))}
       coverCategories={coverCategories}
       canWrite={auth.role !== "CLIENT"}
+      canInviteCensus={canInviteCensus}
     />
   );
 }

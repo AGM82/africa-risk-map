@@ -120,6 +120,8 @@ model Client {
   riskMixPolicies         RiskMixPolicy[]
   structureSessions       PolicyStructureSession[]
   endorsements            Endorsement[]
+  censusInvitations       CensusInvitation[]
+  censusSubmissions       CensusSubmission[]
 
   @@index([status])
   @@map("clients")
@@ -193,6 +195,7 @@ model Territory {
   history                  TerritoryRiskHistory[]
   organisationLocations    OrganisationLocation[]
   territoryBenefitEligibilities TerritoryBenefitEligibility[]
+  censusLocationLines      CensusLocationLine[]
 
   @@unique([country, subRegion])
   @@index([riskCategory])
@@ -372,13 +375,108 @@ model MemberOrganisation {
   riskMgmtPlanOnFile       Boolean                  @default(false)
   crisisMgmtPlanOnFile     Boolean                  @default(false)
   fullUnderwritingApproved Boolean                  @default(false)
+  /// Org contact for census invites (not a platform login; POPIA — contact only).
+  contactName              String?
+  contactEmail             String?
+  contactPhone             String?
+  operationsNote           String?
+  lastCensusAcceptedAt     DateTime?
   createdAt                DateTime                 @default(now())
   updatedAt                DateTime                 @updatedAt
   locations                OrganisationLocation[]
+  censusInvitations        CensusInvitation[]
+  censusSubmissions        CensusSubmission[]
 
   @@index([clientId])
   @@index([status])
   @@map("member_organisations")
+}
+
+/// Purpose of a magic-link census invitation (new org intake vs annual update).
+enum CensusInvitationPurpose {
+  NEW
+  UPDATE
+}
+
+/// Lifecycle of a census declaration before it becomes book of record.
+enum CensusSubmissionStatus {
+  SUBMITTED
+  ACCEPTED
+  DECLINED
+  CHANGES_REQUESTED
+}
+
+/// Time-limited magic-link invite for a member org to complete a census form.
+/// Raw token is never stored — only SHA-256 tokenHash.
+model CensusInvitation {
+  id                   String                  @id @default(cuid())
+  clientId             String
+  client               Client                  @relation(fields: [clientId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  memberOrganisationId String
+  memberOrganisation   MemberOrganisation      @relation(fields: [memberOrganisationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  tokenHash            String                  @unique
+  purpose              CensusInvitationPurpose
+  expiresAt            DateTime
+  revokedAt            DateTime?
+  createdByUserId      String
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  submissions          CensusSubmission[]
+
+  @@index([clientId])
+  @@index([memberOrganisationId])
+  @@index([expiresAt])
+  @@map("census_invitations")
+}
+
+/// Declared census payload awaiting Broker/Insurer review. Does not write the
+/// live ledger until accept.
+model CensusSubmission {
+  id                     String                 @id @default(cuid())
+  clientId               String
+  client                 Client                 @relation(fields: [clientId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  memberOrganisationId   String
+  memberOrganisation     MemberOrganisation     @relation(fields: [memberOrganisationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  invitationId           String
+  invitation             CensusInvitation       @relation(fields: [invitationId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  status                 CensusSubmissionStatus @default(SUBMITTED)
+  organisationName       String
+  contactName            String?
+  contactEmail           String?
+  contactPhone           String?
+  asOfDate               DateTime
+  preferredPlanType      PlanType               @default(ESSENTIAL)
+  riskMgmtPlanAvailable  Boolean                @default(false)
+  crisisMgmtPlanAvailable Boolean               @default(false)
+  reviewNote             String?
+  reviewedByUserId       String?
+  reviewedAt             DateTime?
+  submittedAt            DateTime               @default(now())
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+  locationLines          CensusLocationLine[]
+
+  @@index([clientId])
+  @@index([memberOrganisationId])
+  @@index([invitationId])
+  @@index([status])
+  @@map("census_submissions")
+}
+
+/// One declared site within a census submission (counts by PlanType only).
+model CensusLocationLine {
+  id                 String           @id @default(cuid())
+  submissionId       String
+  submission         CensusSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  territoryId        String
+  territory          Territory        @relation(fields: [territoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  siteName           String
+  essentialHeadcount Int              @default(0)
+  premiumHeadcount   Int              @default(0)
+
+  @@index([submissionId])
+  @@index([territoryId])
+  @@map("census_location_lines")
 }
 
 /// A member org's presence in a Territory with headcount and cover assignment.

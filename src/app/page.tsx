@@ -3,6 +3,7 @@ import { UserButton } from "@clerk/nextjs";
 import {
   Building2,
   Calculator,
+  ClipboardList,
   LayoutDashboard,
   MapPinned,
   MessagesSquare,
@@ -120,8 +121,26 @@ export default async function HomePage() {
             <CardContent className="text-muted-foreground text-sm">
               <Link href="/organisations" className="text-foreground font-medium underline">
                 Member organisations
+              </Link>
+              {" · "}
+              <Link href="/census-review" className="text-foreground font-medium underline">
+                Census review
               </Link>{" "}
-              — reserve/park operators, territory locations, and headcounts for the active client.
+              — reserve/park operators, magic-link census intake, and headcounts for the active
+              client.
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-muted-foreground flex items-center gap-2 text-sm font-medium">
+                <ClipboardList className="size-4" /> Census intake
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-muted-foreground text-sm">
+              <Link href="/census-review" className="text-foreground font-medium underline">
+                Review declarations
+              </Link>{" "}
+              — copy a census link from Organisations; parks submit without a login.
             </CardContent>
           </Card>
           <Card>
