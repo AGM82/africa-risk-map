@@ -55,5 +55,5 @@ or unbalanced.
 ## Out of scope
 
 - Endorsement ledger → premium-calculator
-- CoverCategory baselines → policy-structure
+- CoverCategory baselines on locations → wire FK after policy-structure (see `docs/policy-structure.md`)
 - Live Neon seed / migrate deploy

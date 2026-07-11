@@ -48,10 +48,14 @@ describe("client-broker service", () => {
   it("lists all clients for insurer and only assigned clients for broker", async () => {
     const { service } = buildService();
     expect((await service.listAccessibleClients(insurer)).map((c) => c.id)).toEqual([
+      "client-aparks",
       "client-graa",
       "client-sample",
     ]);
-    expect((await service.listAccessibleClients(broker)).map((c) => c.id)).toEqual(["client-graa"]);
+    expect((await service.listAccessibleClients(broker)).map((c) => c.id)).toEqual([
+      "client-aparks",
+      "client-graa",
+    ]);
     expect((await service.listAccessibleClients(clientUser)).map((c) => c.id)).toEqual([
       "client-graa",
     ]);
@@ -119,7 +123,7 @@ describe("client-broker service", () => {
   it("lists clients with brokers for accessible roles", async () => {
     const { service } = buildService();
     const rows = await service.listClientsWithBrokers(broker);
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.broker?.id).toBe("broker-lombard");
+    expect(rows).toHaveLength(2);
+    expect(rows.every((r) => r.broker?.id === "broker-lombard")).toBe(true);
   });
 });

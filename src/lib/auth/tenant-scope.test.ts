@@ -42,6 +42,6 @@ describe("resolveTenantScope", () => {
 
   it("falls back when the cookie is not accessible", async () => {
     const scope = await resolveTenantScope(insurer, brokerService(), "missing-client");
-    expect(scope.activeClientId).toBe("client-graa");
+    expect(scope.activeClientId).toBe("client-aparks");
   });
 });
