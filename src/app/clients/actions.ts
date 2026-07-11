@@ -28,6 +28,7 @@ export async function switchActiveClientAction(clientId: string): Promise<Action
     });
     revalidatePath("/clients");
     revalidatePath("/organisations");
+    revalidatePath("/recalibration");
     revalidatePath("/map");
     return { ok: true };
   } catch (error) {

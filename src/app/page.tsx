@@ -1,6 +1,14 @@
 ﻿import Link from "next/link";
 import { UserButton } from "@clerk/nextjs";
-import { Building2, Calculator, MapPinned, ShieldCheck, Users, Warehouse } from "lucide-react";
+import {
+  Building2,
+  Calculator,
+  MapPinned,
+  Scale,
+  ShieldCheck,
+  Users,
+  Warehouse,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getAuthContext } from "@/lib/auth/session";
 
@@ -73,6 +81,19 @@ export default async function HomePage() {
                 Member organisations
               </Link>{" "}
               — reserve/park operators, territory locations, and headcounts for the active client.
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-muted-foreground flex items-center gap-2 text-sm font-medium">
+                <Scale className="size-4" /> Recalibration wizard
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-muted-foreground text-sm">
+              <Link href="/recalibration" className="text-foreground font-medium underline">
+                Reconcile headcounts
+              </Link>{" "}
+              — match organisation locations to ledger PlanType baselines, then lock.
             </CardContent>
           </Card>
           {authContext.role !== "CLIENT" ? (

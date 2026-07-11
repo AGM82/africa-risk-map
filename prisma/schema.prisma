@@ -112,8 +112,9 @@ model Client {
   status      ClientStatus             @default(ACTIVE)
   createdAt   DateTime                 @default(now())
   updatedAt   DateTime                 @updatedAt
-  assignments ClientBrokerAssignment[]
-  memberOrganisations MemberOrganisation[]
+  assignments             ClientBrokerAssignment[]
+  memberOrganisations     MemberOrganisation[]
+  recalibrationBatches    RecalibrationBatch[]
 
   @@index([status])
   @@map("clients")
@@ -397,4 +398,32 @@ model OrganisationLocation {
   @@index([memberOrganisationId])
   @@index([territoryId])
   @@map("organisation_locations")
+}
+
+// ---------------------------------------------------------------------------
+// Client-scoped recalibration: reconcile org/location headcounts against
+// ledger PlanType baselines until balanced, then lock. Endorsements later.
+// ---------------------------------------------------------------------------
+
+enum RecalibrationStatus {
+  IN_PROGRESS
+  LOCKED
+}
+
+/// One-time reconciliation batch per client against PlanType headcount baselines.
+model RecalibrationBatch {
+  id             String              @id @default(cuid())
+  clientId       String
+  client         Client              @relation(fields: [clientId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  status         RecalibrationStatus @default(IN_PROGRESS)
+  /// PlanType baselines: { "ESSENTIAL": number, "PREMIUM": number }
+  baselines      Json
+  lockedAt       DateTime?
+  lockedByUserId String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@index([clientId])
+  @@index([status])
+  @@map("recalibration_batches")
 }
