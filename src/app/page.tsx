@@ -43,8 +43,10 @@ export default async function HomePage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="text-muted-foreground text-sm">
-              Territory risk data, organisation and location pins. Built in the risk-register-map
-              to-dos.
+              <Link href="/map" className="text-foreground font-medium underline">
+                Open the map
+              </Link>{" "}
+              — territory risk choropleth, detail drawer, and table fallback.
             </CardContent>
           </Card>
           <Card>

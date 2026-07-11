@@ -1,10 +1,10 @@
 // Prisma schema — Africa Risk Map Platform
 //
-// Domain models (Territory, Client, MemberOrganisation, Policy, etc.) are added
-// incrementally by their own to-dos per the platform plan. This file currently
+// Domain models are added incrementally by their own to-dos. This file currently
 // establishes:
 //   - PostgreSQL + PostGIS datasource, pooled (runtime) vs direct (migrations) URLs
 //   - The AuditLogEntry model, which every later to-do's mutations write to
+//   - Shared/global Territory + TerritoryRiskHistory (risk register)
 //   - Shared/global spatial reference layers (AdminBoundary, Airport,
 //     HealthFacility, Place) + SpatialDatasetRefresh provenance
 //   - The Row-Level Security pattern (see prisma/migrations/0001_init/migration.sql)
@@ -42,6 +42,25 @@ enum AuditAction {
   ACCESS_CHANGE
 }
 
+/// Conventional risk-severity tiers (map colour exception — see Design & UX).
+enum RiskCategory {
+  Low
+  Medium
+  High
+  VeryHigh  @map("Very High")
+  Extreme
+
+  @@map("RiskCategory")
+}
+
+/// Territory Benefit Options Available from the Risk Rating Table.
+enum BenefitOptionsAvailable {
+  CATEGORIES_1_2
+  CATEGORIES_3_4
+  CATEGORY_4_ONLY
+  DECLINE
+}
+
 /// Immutable, append-only audit trail for every state-changing action across the
 /// platform (territory edits, endorsements, policy confirmations, user-admin
 /// access changes, AI-drafted-record confirmations, etc.). Never updated or
@@ -65,6 +84,68 @@ model AuditLogEntry {
   @@index([entityType, entityId])
   @@index([createdAt])
   @@map("audit_log_entries")
+}
+
+// ---------------------------------------------------------------------------
+// Shared / global Territory risk register (no clientId, no RLS).
+// ---------------------------------------------------------------------------
+
+/// Country or rated sub-region (e.g. "Nigeria" + "North-East"). Shared source of
+/// truth maintained by the Insurer. Empty string for subRegion = whole-country.
+model Territory {
+  id                       String                  @id @default(cuid())
+  country                  String
+  /// Empty string when the row rates the whole country (not a sub-region).
+  subRegion                String                  @default("")
+  graaPresence             Boolean                 @default(false)
+  countryHeadcount         Int?
+  healthcareInfrastructure Int
+  medicalPersonnel         Int
+  medicalTransport         Int
+  emergencyResponse        Int
+  securityConflict         Int
+  occupationalHazards      Int
+  totalScore               Int
+  riskCategory             RiskCategory
+  evacuationPaths          String?
+  evacCostEstimate         Decimal?                @db.Decimal(12, 2)
+  benefitOptions           BenefitOptionsAvailable
+  contextNotes             String?
+  evacuationFeasible       Boolean                 @default(true)
+  /// Optional join key to geoBoundaries ADM1 externalId when mapped.
+  adminBoundaryExternalId  String?
+  isoCountry               String?
+  createdAt                DateTime                @default(now())
+  updatedAt                DateTime                @updatedAt
+  history                  TerritoryRiskHistory[]
+
+  @@unique([country, subRegion])
+  @@index([riskCategory])
+  @@index([graaPresence])
+  @@index([isoCountry])
+  @@map("territories")
+}
+
+/// Immutable snapshot of risk scores after each Insurer edit.
+/// Parent delete is RESTRICT so history cannot be destroyed under audit.
+model TerritoryRiskHistory {
+  id                       String       @id @default(cuid())
+  territoryId              String
+  territory                Territory    @relation(fields: [territoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  healthcareInfrastructure Int
+  medicalPersonnel         Int
+  medicalTransport         Int
+  emergencyResponse        Int
+  securityConflict         Int
+  occupationalHazards      Int
+  totalScore               Int
+  riskCategory             RiskCategory
+  actorUserId              String
+  createdAt                DateTime     @default(now())
+
+  @@index([territoryId])
+  @@index([createdAt])
+  @@map("territory_risk_history")
 }
 
 // ---------------------------------------------------------------------------
