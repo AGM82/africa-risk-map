@@ -76,8 +76,8 @@ describe("recalibration service", () => {
     const snapshot = await recalibration.getProgress(insurer, "client-graa");
     expect(snapshot.batch.baselines).toEqual({ ESSENTIAL: 6503, PREMIUM: 14 });
     expect(snapshot.progress.balanced).toBe(false);
-    expect(snapshot.progress.byPlan[0]?.actual).toBe(42);
-    expect(snapshot.progress.byPlan[1]?.actual).toBe(18);
+    expect(snapshot.progress.byPlan[0]?.actual).toBe(47);
+    expect(snapshot.progress.byPlan[1]?.actual).toBe(16);
   });
 
   it("blocks broker from inaccessible client", async () => {

@@ -15,8 +15,7 @@ locations, `/calculator` UI with what-if gates and risk-mix drift.
 ## Deferred
 
 - Real African Parks production schedule/wage figures (demo placeholder until live load)
-- Endorsement history table / reverse UI → dashboards-reporting
 
 ## Next
 
-- `dashboards-reporting` — Composer (Phase 6)
+- `external-signals` — Composer (Phase 7 stretch)
