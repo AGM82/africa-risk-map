@@ -2,12 +2,16 @@
 //
 // Domain models (Territory, Client, MemberOrganisation, Policy, etc.) are added
 // incrementally by their own to-dos per the platform plan. This file currently
-// establishes only the foundations-level concerns:
+// establishes:
 //   - PostgreSQL + PostGIS datasource, pooled (runtime) vs direct (migrations) URLs
 //   - The AuditLogEntry model, which every later to-do's mutations write to
+//   - Shared/global spatial reference layers (AdminBoundary, Airport,
+//     HealthFacility, Place) + SpatialDatasetRefresh provenance
 //   - The Row-Level Security pattern (see prisma/migrations/0001_init/migration.sql)
 //     that every later clientId-scoped table must replicate
-
+//
+// Geometry columns use Unsupported("geometry(...)") — see
+// docs/prisma-postgis-geometry.md and src/lib/db/spatial.ts.
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["postgresqlExtensions"]
@@ -61,4 +65,122 @@ model AuditLogEntry {
   @@index([entityType, entityId])
   @@index([createdAt])
   @@map("audit_log_entries")
+}
+
+// ---------------------------------------------------------------------------
+// Shared / global spatial reference layers (no clientId, no RLS).
+// Geometry columns are Unsupported — spatial I/O via $queryRaw/$executeRaw
+// only. See docs/prisma-postgis-geometry.md and src/lib/db/spatial.ts.
+// ---------------------------------------------------------------------------
+
+/// Provenance row for one import of a spatial dataset (source + last refresh).
+model SpatialDatasetRefresh {
+  id              String   @id @default(cuid())
+  /// Stable source key: geoboundaries | ourairports | healthsites | geonames
+  source          String   @unique
+  lastRefreshedAt DateTime
+  checksum        String?
+  rowCount        Int?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  adminBoundaries  AdminBoundary[]
+  airports         Airport[]
+  healthFacilities HealthFacility[]
+  places           Place[]
+
+  @@map("spatial_dataset_refreshes")
+}
+
+/// Sub-national admin polygon (geoBoundaries ADM1). isoCountry = ISO alpha-3.
+model AdminBoundary {
+  id              String                    @id @default(cuid())
+  externalId      String
+  name            String
+  isoCountry      String
+  shapeType       String                    @default("ADM1")
+  source          String
+  sourceUpdatedAt DateTime?
+  refreshId       String?
+  refresh         SpatialDatasetRefresh?    @relation(fields: [refreshId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  /// Opaque to Prisma — read/write via ST_GeomFromText / ST_AsGeoJSON raw SQL.
+  geom            Unsupported("geometry(MultiPolygon,4326)")
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+
+  @@unique([source, externalId])
+  @@index([isoCountry])
+  @@index([source])
+  @@index([refreshId])
+  @@map("admin_boundaries")
+}
+
+/// Airport / airstrip point (OurAirports). isoCountry = ISO alpha-2.
+model Airport {
+  id              String                 @id @default(cuid())
+  externalId      String
+  name            String
+  isoCountry      String
+  iataCode        String?
+  icaoCode        String?
+  type            String?
+  source          String
+  sourceUpdatedAt DateTime?
+  refreshId       String?
+  refresh         SpatialDatasetRefresh? @relation(fields: [refreshId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  geom            Unsupported("geometry(Point,4326)")
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  @@unique([source, externalId])
+  @@index([isoCountry])
+  @@index([source])
+  @@index([refreshId])
+  @@map("airports")
+}
+
+/// Hospital / clinic point (healthsites.io). isoCountry = ISO alpha-3 when known.
+model HealthFacility {
+  id              String                 @id @default(cuid())
+  externalId      String
+  name            String
+  isoCountry      String?
+  amenity         String?
+  source          String
+  sourceUpdatedAt DateTime?
+  refreshId       String?
+  refresh         SpatialDatasetRefresh? @relation(fields: [refreshId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  geom            Unsupported("geometry(Point,4326)")
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  @@unique([source, externalId])
+  @@index([isoCountry])
+  @@index([source])
+  @@index([refreshId])
+  @@map("health_facilities")
+}
+
+/// Populated place point (GeoNames). isoCountry = ISO alpha-2.
+model Place {
+  id              String                 @id @default(cuid())
+  externalId      String
+  name            String
+  isoCountry      String
+  featureClass    String?
+  featureCode     String?
+  population      Int?
+  source          String
+  sourceUpdatedAt DateTime?
+  refreshId       String?
+  refresh         SpatialDatasetRefresh? @relation(fields: [refreshId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  geom            Unsupported("geometry(Point,4326)")
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  @@unique([source, externalId])
+  @@index([isoCountry])
+  @@index([source])
+  @@index([refreshId])
+  @@map("places")
 }

@@ -1,0 +1,78 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "shapeID": "ZAF-ADM1-1",
+        "shapeName": "Gauteng",
+        "shapeGroup": "ZAF",
+        "shapeType": "ADM1"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [27.9, -25.5],
+            [28.5, -25.5],
+            [28.5, -26.5],
+            [27.9, -26.5],
+            [27.9, -25.5]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "shapeID": "NGA-ADM1-NE",
+        "shapeName": "Borno",
+        "shapeGroup": "NGA",
+        "shapeType": "ADM1"
+      },
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [12.0, 11.0],
+              [13.0, 11.0],
+              [13.0, 12.0],
+              [12.0, 12.0],
+              [12.0, 11.0]
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "shapeID": "BAD-NO-GEOM",
+        "shapeName": "Missing Geometry",
+        "shapeGroup": "ZAF"
+      },
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "shapeID": "BAD-COORDS",
+        "shapeName": "Invalid Coords",
+        "shapeGroup": "ZAF"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [200, 0],
+            [201, 0],
+            [201, 1],
+            [200, 1],
+            [200, 0]
+          ]
+        ]
+      }
+    }
+  ]
+}
