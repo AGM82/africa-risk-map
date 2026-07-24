@@ -71,7 +71,7 @@
     "@fontsource-variable/geist": "^5.2.9",
     "@prisma/client": "^6.19.3",
     "@sentry/nextjs": "^10.63.0",
-    "@tailwindcss/postcss": "^4.3.2",
+    "@tailwindcss/postcss": "^4.3.3",
     "@tanstack/react-table": "8.21.3",
     "class-variance-authority": "^0.7.1",
     "client-only": "^0.0.1",
