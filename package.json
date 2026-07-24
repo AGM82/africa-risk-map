@@ -65,7 +65,7 @@
     "vitest": "^4.1.9"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.110.0",
+    "@anthropic-ai/sdk": "^0.112.1",
     "@base-ui/react": "^1.6.0",
     "@clerk/nextjs": "^7.5.12",
     "@fontsource-variable/geist": "^5.2.9",
