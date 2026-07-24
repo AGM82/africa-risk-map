@@ -3,10 +3,11 @@ updates:
   - package-ecosystem: npm
     directory: "/"
     schedule:
-      interval: weekly
+      interval: monthly
     cooldown:
       default-days: 7
-    open-pull-requests-limit: 10
+    # Keep the inbox quiet: at most a handful of grouped PRs open at once.
+    open-pull-requests-limit: 3
     commit-message:
       prefix: "chore(deps)"
     groups:
@@ -32,6 +33,12 @@ updates:
           - "tailwind-merge"
           - "prettier-plugin-tailwindcss"
           - "@fontsource-variable/*"
+      # Sweep every remaining production dependency (Sentry, Inngest, Clerk,
+      # Next, etc.) into one PR so runtime bumps don't each open their own.
+      production-dependencies:
+        dependency-type: production
+        patterns:
+          - "*"
     ignore:
       # ESLint major versions frequently break plugins (e.g. eslint-plugin-jsx-a11y
       # caps at eslint@^9). Require an explicit compatibility check before merging.
@@ -45,8 +52,14 @@ updates:
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
-      interval: weekly
+      interval: monthly
     cooldown:
       default-days: 7
+    open-pull-requests-limit: 3
     commit-message:
       prefix: "ci(deps)"
+    groups:
+      # One PR for all action bumps rather than one per action.
+      github-actions:
+        patterns:
+          - "*"
