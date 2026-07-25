@@ -41,6 +41,12 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "typescript-eslint"
         update-types: ["version-update:semver-major"]
+      # TypeScript 7 drops the JS programmatic API (ts.Extension.Cjs, etc.) that
+      # typescript-eslint still needs, so lint crashes with
+      # "Cannot read properties of undefined (reading 'Cjs')". Hold majors until
+      # typescript-eslint supports TS 7.1+ (typescript-eslint#12518).
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: "/"
