@@ -47,6 +47,13 @@ updates:
       # typescript-eslint supports TS 7.1+ (typescript-eslint#12518).
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
+      # Prisma 7 moves datasource URLs out of schema.prisma into prisma.config.ts
+      # and changes client construction. Require a planned migration, not a
+      # drive-by Dependabot bump — keep prisma and @prisma/client in lockstep.
+      - dependency-name: "prisma"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@prisma/client"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: "/"
