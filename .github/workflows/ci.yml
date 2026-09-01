@@ -65,7 +65,7 @@ jobs:
         # for the artefact that actually ships. PR runs (fork or not) also
         # can't reliably obtain the OIDC token this step needs.
         if: github.event_name == 'push'
-        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: 'next-standalone.tar.gz'
       - name: Upload deployable build output
